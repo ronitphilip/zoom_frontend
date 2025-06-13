@@ -8,29 +8,51 @@ interface ModalProps {
     heading?: string
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, heading='Modal' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, heading = 'Modal' }) => {
+    const modalRef = useRef<HTMLDivElement>(null)
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isOpen])
 
     if (!isOpen) return null
 
     return (
         <dialog
-            className="fixed top-0 left-0 z-50 flex items-center justify-center w-full h-full bg-transparent"
+            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+            style={{ opacity: isOpen ? 1 : 0 }}
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose()
             }}
         >
-            <div className='flex flex-col bg-white rounded-2xl border'>
-                <div className='flex justify-between items-center p-3'>
-                    <h1 className='text-lg font-semibold ps-3'>{heading}</h1>
+            <div
+                ref={modalRef}
+                className="flex flex-col bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300"
+                style={{
+                    transform: isOpen ? 'scale(1)' : 'scale(0.95)',
+                    opacity: isOpen ? 1 : 0,
+                }}
+            >
+                <div className="flex justify-between items-center p-4 border-b border-blue-100">
+                    <h1 className="text-xl font-bold text-gray-800 tracking-tight ps-2">
+                        {heading.toUpperCase()}
+                    </h1>
                     <button
                         onClick={onClose}
+                        className="p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
                         aria-label="Close modal"
                     >
-                        <X className="h-5 w-5" />
+                        <X className="h-5 w-5 text-gray-600 hover:text-blue-600" />
                     </button>
                 </div>
-                <div className="px-4 pb-4">{children}</div>
+                <div className="px-6 py-5 text-gray-700">{children}</div>
             </div>
         </dialog>
     )

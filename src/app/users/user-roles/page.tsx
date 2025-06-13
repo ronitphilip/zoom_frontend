@@ -13,7 +13,7 @@ type Feature = typeof FEATURES[number];
 
 const ACTIONS: { [key in Feature]: string[] } = {
   overview: ['view'],
-  historicalReports: ['agentReports', 'queueReports', 'flowReports', 'otherReports', ],
+  historicalReports: ['agentReports', 'queueReports', 'flowReports', 'otherReports',],
   realTime: ['currentCalls', 'agentStatus'],
   userManagement: ['manageuser', 'managerole']
 };
@@ -162,7 +162,7 @@ const Page = () => {
     };
 
     try {
-      const result = await deleteRoleAPI({roleId: id}, headers);
+      const result = await deleteRoleAPI({ roleId: id }, headers);
       console.log('Delete Role Response:', result);
       if (result.success) {
         await fetchAllRoles();
@@ -201,64 +201,78 @@ const Page = () => {
           }}
           heading={editingRole ? 'Edit Role' : 'Add Role'}
         >
-          <div className="space-y-4 p-5">
-            <div className="grid grid-cols-3 min-w-full items-center">
-              <h3>{editingRole ? 'Edit Role' : 'Add Role'}</h3>
-              <div className="col-span-2">
-                <input
-                  id="role"
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-2/3 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ms-3"
-                  placeholder="Enter role name"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 w-full items-start">
-              <h3>Permissions</h3>
-              <div className="col-span-2 space-y-4 ps-3">
-                {FEATURES.map((feature) => (
-                  <div key={feature} className="space-y-2">
-                    <h4 className="font-medium capitalize">{feature}</h4>
-                    <div className="flex flex-wrap gap-4">
-                      {ACTIONS[feature].map((action) => (
-                        <div key={`${feature}-${action}`} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`${feature}-${action}`}
-                            checked={formData.permissions?.[feature]?.includes(action) || false}
-                            onChange={() => togglePermission(feature, action)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor={`${feature}-${action}`} className="capitalize">
-                            {action}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
+          <div className="space-y-6 p-6">
+      <div className="group">
+        <label
+          htmlFor="role"
+          className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600"
+        >
+          Role Name
+        </label>
+        <input
+          id="role"
+          value={formData.role}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
+          placeholder="Enter role name"
+        />
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-800">Permissions</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {FEATURES.map((feature) => (
+            <div
+              key={feature}
+              className="bg-gray-50 p-4 rounded-lg border border-gray-100 shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <h4 className="font-medium text-gray-800 capitalize mb-3">{feature}</h4>
+              <div className="space-y-2">
+                {ACTIONS[feature].map((action) => (
+                  <div
+                    key={`${feature}-${action}`}
+                    className="flex items-center space-x-2 group"
+                  >
+                    <input
+                      type="checkbox"
+                      id={`${feature}-${action}`}
+                      checked={formData.permissions?.[feature]?.includes(action) || false}
+                      onChange={() => togglePermission(feature, action)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer transition-colors duration-200"
+                    />
+                    <label
+                      htmlFor={`${feature}-${action}`}
+                      className="text-sm text-gray-700 capitalize group-hover:text-blue-600 transition-colors duration-200 cursor-pointer"
+                    >
+                      {action}
+                    </label>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="flex justify-end space-x-2">
-              <button
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
-                onClick={() => {
-                  setIsOpen(false);
-                  setEditingRole(null);
-                  setFormData({ id: '', role: '', permissions: {} });
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                onClick={handleSaveRole}
-              >
-                {editingRole ? 'Update' : 'Create'}
-              </button>
-            </div>
-          </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <button
+          className="px-5 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200"
+          onClick={() => {
+            setIsOpen(false)
+            setEditingRole(null)
+            setFormData({ id: '', role: '', permissions: {} })
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200"
+          onClick={handleSaveRole}
+        >
+          {editingRole ? 'Update' : 'Create'}
+        </button>
+      </div>
+    </div>
         </Modal>
 
         <div className="bg-white rounded-lg shadow overflow-hidden w-full">

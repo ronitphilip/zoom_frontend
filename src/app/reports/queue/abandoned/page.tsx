@@ -1,10 +1,21 @@
+"use client";
+import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout'
-import React from 'react'
+import AbandonedCallsReport from '@/components/queue-reports/AbandonedCallsReport'
 
 const page = () => {
+  const [startDate, setStartDate] = useState("2025-03-10");
+  const [endDate, setEndDate] = useState("2025-03-16");
   return (
     <MainLayout>
-      <div>Abandoned</div>
+      <div>
+        <AbandonedCallsReport
+        startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        />
+      </div>
     </MainLayout>
   )
 }

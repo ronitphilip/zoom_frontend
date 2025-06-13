@@ -18,7 +18,8 @@ type NavItem = {
 const SideBar = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [expandedMap, setExpandedMap] = useState<Record<number, string>>({});
-    const [userRole, setRole] = useState<RoleAttributes>()
+    const [userRole, setRole] = useState<RoleAttributes>();
+    const [email, setEmail] = useState<string>('user@sysgrate.com')
     const pathname = usePathname();
     const router = useRouter();
 
@@ -34,6 +35,17 @@ const SideBar = () => {
     }, [pathname]);
 
     useEffect(() => {
+        const storedEmail = sessionStorage.getItem('email');
+        if (storedEmail) {
+            try {
+                setEmail(JSON.parse(storedEmail));
+            } catch (error) {
+                console.error("Failed to parse email:", error);
+                setEmail('user@sysgrate.com');
+            }
+        } else {
+            setEmail('user@sysgrate.com');
+        }
         const decryptStoredRole = async () => {
             const encryptedRole = sessionStorage.getItem('rl');
             if (encryptedRole) {
@@ -304,7 +316,7 @@ const SideBar = () => {
                                 </div>
                                 <div className="ml-3">
                                     <p className="text-sm font-medium text-white">{userRole?.role}</p>
-                                    <p className="text-xs text-blue-300">{'admin@sysgrate.com'}</p>
+                                    <p className="text-xs text-blue-300">{email}</p>
                                 </div>
                             </div>
                             <div className='border-2 w-8 h-8 rounded-full cursor-pointer flex items-center justify-center hover:bg-white hover:text-blue-700'>

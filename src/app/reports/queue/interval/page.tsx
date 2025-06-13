@@ -1,10 +1,19 @@
+'use client'
 import MainLayout from '@/components/layout/MainLayout'
-import React from 'react'
+import SplitSkillSummaryIntervalReport from '@/components/queue-reports/skill/SplitSkillSummaryIntervalReport'
+import React, { useState } from 'react'
 
 const page = () => {
+  const [startDate, setStartDate] = useState("2025-03-10");
+  const [endDate, setEndDate] = useState("2025-03-16");
   return (
     <MainLayout>
-      <div>Interval</div>
+      <SplitSkillSummaryIntervalReport 
+        startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+      />
     </MainLayout>
   )
 }

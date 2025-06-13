@@ -56,6 +56,7 @@ const page = () => {
         alert('Login success');
         sessionStorage.setItem('tk', JSON.stringify(result?.token));
         sessionStorage.setItem('rl', JSON.stringify(result?.data));
+        sessionStorage.setItem('email', JSON.stringify(formData?.email));
         router.push('/dashboard');
       }else{
         alert(result.error || 'Login failed')

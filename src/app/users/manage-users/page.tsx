@@ -110,13 +110,13 @@ const Page = () => {
     setIsSaving(true);
     try {
       const updateBody = {
-          name: formData.name,
-          email: formData.email,
-          roleId: matchedRole.id,
-        }
+        name: formData.name,
+        email: formData.email,
+        roleId: matchedRole.id,
+      }
       const result = await updateUserAPI(String(selectedUser.id), updateBody, getHeaders());
       console.log(result);
-      
+
       if (result.success) {
         alert('User updated successfully');
         setIsEditModalOpen(false);
@@ -234,11 +234,11 @@ const Page = () => {
               ) : allUsers.length > 0 ? (
                 allUsers.map((user, index) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">{index + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">{user.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">{user.role?.role || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-900">{user.name}</td>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-900">{user.email}</td>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap text-gray-900">{user.role?.role || 'N/A'}</td>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap">
                       <div className="flex space-x-2">
                         <button
                           className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
@@ -273,40 +273,37 @@ const Page = () => {
       </div>
 
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} heading="Edit User">
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-6">
+          <div className="group">
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Name
             </label>
-            <input
-              id="name"
-              type="text"
+            <input id="name" type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={isSaving}
+              placeholder="Enter name"
             />
           </div>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <div className="group">
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
+            <input id="email" type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={isSaving}
+              placeholder="Enter email"
             />
           </div>
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+          <div className="group">
+            <label htmlFor="role" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Role
             </label>
-            <select
-              id="role"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            <select id="role"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iNyIgdmlld0JveD0iMCAwIDEyIDciIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw2IDZMMTIgMSIgc3Ryb2tlPSIjNjBEOUI5IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[length:12px_7px] bg-[right_1rem_center] bg-no-repeat"
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               disabled={isSaving}
@@ -319,60 +316,67 @@ const Page = () => {
               ))}
             </select>
           </div>
-          <div className="flex justify-end space-x-2 pt-2">
+          <div className="flex justify-end space-x-3 pt-4">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-50"
+              className="px-5 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSaving}
             >
               Cancel
             </button>
             <button
               onClick={handleEdit}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </span>
+              ) : (
+                'Save'
+              )}
             </button>
           </div>
         </div>
       </Modal>
 
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} heading="Create User">
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-6">
+          <div className="group">
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Name
             </label>
-            <input
-              id="name"
-              type="text"
+            <input id="name" type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={isSaving}
+              placeholder="Enter name"
             />
           </div>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <div className="group">
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
+            <input id="email" type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
               disabled={isSaving}
+              placeholder="Enter email"
             />
           </div>
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+          <div className="group">
+            <label htmlFor="role" className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600">
               Role
             </label>
-            <select
-              id="role"
-              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            <select id="role"
+              className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iNyIgdmlld0JveD0iMCAwIDEyIDciIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw2IDZMMTIgMSIgc3Ryb2tlPSIjNjBEOUI5IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+')] bg-[length:12px_7px] bg-[right_1rem_center] bg-no-repeat"
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               disabled={isSaving}
@@ -385,20 +389,30 @@ const Page = () => {
               ))}
             </select>
           </div>
-          <div className="flex justify-end space-x-2 pt-2">
+          <div className="flex justify-end space-x-3 pt-4">
             <button
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-50"
+              className="px-5 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSaving}
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSaving}
             >
-              {isSaving ? 'Creating...' : 'Create'}
+              {isSaving ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </span>
+              ) : (
+                'Create'
+              )}
             </button>
           </div>
         </div>
