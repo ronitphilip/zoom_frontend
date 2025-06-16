@@ -7,9 +7,10 @@ import Modal from '@/components/layout/Modal';
 import { Role, Permission } from '@/types/roleTypes';
 import { fetchAllRolesAPI, createRoleAPI, addRolePermissionsAPI, deleteRoleAPI } from '@/services/userAPI';
 import { Headers } from '@/services/commonAPI';
+import PermissionTree from '@/components/filters/PermissionTree';
 
 const FEATURES = ['overview', 'historicalReports', 'realTime', 'userManagement'] as const;
-type Feature = typeof FEATURES[number];
+export type Feature = typeof FEATURES[number];
 
 const ACTIONS: { [key in Feature]: string[] } = {
   overview: ['view'],
@@ -24,6 +25,7 @@ const Page = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState<Role>({ id: '', role: '', permissions: {} });
   const [loading, setLoading] = useState(false);
+  console.log(roles);
 
   useEffect(() => {
     fetchAllRoles();
@@ -177,7 +179,7 @@ const Page = () => {
 
   return (
     <MainLayout>
-      <div className="p-6">
+      <div>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-blue-800">User Roles</h2>
           <button
@@ -202,77 +204,56 @@ const Page = () => {
           heading={editingRole ? 'Edit Role' : 'Add Role'}
         >
           <div className="space-y-6 p-6">
-      <div className="group">
-        <label
-          htmlFor="role"
-          className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600"
-        >
-          Role Name
-        </label>
-        <input
-          id="role"
-          value={formData.role}
-          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-          className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
-          placeholder="Enter role name"
-        />
-      </div>
+            <div className="group">
+              <label
+                htmlFor="role"
+                className="block text-sm font-semibold text-gray-800 mb-1.5 transition-colors group-focus-within:text-blue-600"
+              >
+                Role Name
+              </label>
+              <input
+                id="role"
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full px-3.5 py-2.5 text-gray-900 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200"
+                placeholder="Enter role name"
+              />
+            </div>
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-800">Permissions</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {FEATURES.map((feature) => (
-            <div
-              key={feature}
-              className="bg-gray-50 p-4 rounded-lg border border-gray-100 shadow-sm transition-all duration-200 hover:shadow-md"
-            >
-              <h4 className="font-medium text-gray-800 capitalize mb-3">{feature}</h4>
-              <div className="space-y-2">
-                {ACTIONS[feature].map((action) => (
-                  <div
-                    key={`${feature}-${action}`}
-                    className="flex items-center space-x-2 group"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`${feature}-${action}`}
-                      checked={formData.permissions?.[feature]?.includes(action) || false}
-                      onChange={() => togglePermission(feature, action)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer transition-colors duration-200"
-                    />
-                    <label
-                      htmlFor={`${feature}-${action}`}
-                      className="text-sm text-gray-700 capitalize group-hover:text-blue-600 transition-colors duration-200 cursor-pointer"
-                    >
-                      {action}
-                    </label>
-                  </div>
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-800">Permissions</h3>
+              <div className="max-h-96 overflow-y-auto p-3 border border-gray-200 rounded-lg shadow-sm">
+                {FEATURES.map((feature) => (
+                  <PermissionTree
+                    key={feature}
+                    feature={feature}
+                    actions={ACTIONS[feature]}
+                    selectedActions={formData.permissions || {}}
+                    toggle={togglePermission}
+                  />
                 ))}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div className="flex justify-end space-x-3 pt-4">
-        <button
-          className="px-5 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200"
-          onClick={() => {
-            setIsOpen(false)
-            setEditingRole(null)
-            setFormData({ id: '', role: '', permissions: {} })
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200"
-          onClick={handleSaveRole}
-        >
-          {editingRole ? 'Update' : 'Create'}
-        </button>
-      </div>
-    </div>
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                className="px-5 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200"
+                onClick={() => {
+                  setIsOpen(false)
+                  setEditingRole(null)
+                  setFormData({ id: '', role: '', permissions: {} })
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-200"
+                onClick={handleSaveRole}
+              >
+                {editingRole ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </div>
         </Modal>
 
         <div className="bg-white rounded-lg shadow overflow-hidden w-full">
@@ -294,17 +275,21 @@ const Page = () => {
               ) : roles.length > 0 ? (
                 roles.map((role) => (
                   <tr key={role.id} className='hover:bg-gray-50'>
-                    <td className="px-6 py-4 whitespace-nowrap">{role.role}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">{role.role.toUpperCase()}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {role.permissions ? (
-                        Object.entries(role.permissions).map(([feature, actions]) => (
-                          <div key={feature} className="mb-1">
-                            <span className="font-medium capitalize">{feature}: </span>
-                            {Array.isArray(actions) ? actions.join(', ') : 'Invalid permissions'}
-                          </div>
-                        ))
+                        <div className="flex flex-wrap gap-2">
+                          {Object.keys(role.permissions).map((feature) => (
+                            <span
+                              key={feature}
+                              className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full capitalize"
+                            >
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
-                        <span>No permissions</span>
+                        <span className="text-gray-500">No permissions</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
