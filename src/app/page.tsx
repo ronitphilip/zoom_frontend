@@ -51,12 +51,13 @@ const page = () => {
 
     try {
       const result = await loginAPI(formData);
+      console.log(result);
       
       if(result.success){
         alert('Login success');
         sessionStorage.setItem('tk', JSON.stringify(result?.token));
         sessionStorage.setItem('rl', JSON.stringify(result?.data));
-        sessionStorage.setItem('email', JSON.stringify(formData?.email));
+        sessionStorage.setItem('user', JSON.stringify(result?.user));
         router.push('/dashboard');
       }else{
         alert(result.error || 'Login failed')

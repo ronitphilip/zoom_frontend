@@ -1,9 +1,10 @@
 'use client'
 import { decryptRole, RoleAttributes } from '@/utils/decryptRole';
-import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, TrendingUp, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
+import { BarChart3, Calendar, ChevronRight, Clock, EllipsisVertical, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, TrendingUp, UserCog, UserCog2, UserPen, UserRound, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
+import UserProfile from './UserProfile';
 
 type NavItem = {
     id: string;
@@ -19,7 +20,8 @@ const SideBar = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [expandedMap, setExpandedMap] = useState<Record<number, string>>({});
     const [userRole, setRole] = useState<RoleAttributes>();
-    const [email, setEmail] = useState<string>('user@sysgrate.com')
+    const [email, setEmail] = useState<string>('');
+    const [editProfile, setEditProfile] = useState<boolean>(false);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -35,10 +37,10 @@ const SideBar = () => {
     }, [pathname]);
 
     useEffect(() => {
-        const storedEmail = sessionStorage.getItem('email');
-        if (storedEmail) {
+        const user = JSON.parse(sessionStorage.getItem('user') || '"user');
+        if (user) {
             try {
-                setEmail(JSON.parse(storedEmail));
+                setEmail(user.email);
             } catch (error) {
                 console.error("Failed to parse email:", error);
                 setEmail('user@sysgrate.com');
@@ -184,11 +186,6 @@ const SideBar = () => {
         return null;
     };
 
-    const handleLogout = () => {
-        sessionStorage.clear()
-        router.push('/')
-    }
-
     const RenderSideBarOptions = (items: NavItem[], level = 1) => {
         return items
             .filter(item => {
@@ -262,11 +259,33 @@ const SideBar = () => {
     };
 
     return (
-        <div className={`${sidebarOpen ? 'w-75' : 'w-20'} bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out shadow-xl flex flex-col`}>
-            <div className="p-5 flex justify-between items-center border-b border-blue-700/50">
-                {sidebarOpen ? (
-                    <>
-                        <div className="flex items-center space-x-2">
+        <>
+            <div className={`${sidebarOpen ? 'w-75' : 'w-20'} bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out shadow-xl flex flex-col`}>
+                <div className="p-5 flex justify-between items-center border-b border-blue-700/50">
+                    {sidebarOpen ? (
+                        <>
+                            <div className="flex items-center space-x-2">
+                                <div className="bg-gradient-to-br from-blue-500 to-indigo-700 p-1.5 rounded-lg shadow-md flex items-center justify-center w-8 h-8">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M17 8H19.5C20.3284 8 21 7.32843 21 6.5C21 5.67157 20.3284 5 19.5 5H6C4.34315 5 3 6.34315 3 8V16C3 17.6569 4.34315 19 6 19H17.5C18.3284 19 19 18.3284 19 17.5C19 16.6716 18.3284 16 17.5 16H17" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                        <path d="M12.5 8.5L15.5 11.5L12.5 14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M15 11.5H8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                    </svg>
+                                </div>
+                                <h1 className="text-xl font-bold tracking-tight">Sysgrate</h1>
+                            </div>
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="text-blue-200 hover:text-white transition-colors rounded-full p-1 hover:bg-blue-700/40"
+                            >
+                                <X size={20} />
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="mx-auto text-blue-200 hover:text-white transition-colors"
+                        >
                             <div className="bg-gradient-to-br from-blue-500 to-indigo-700 p-1.5 rounded-lg shadow-md flex items-center justify-center w-8 h-8">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M17 8H19.5C20.3284 8 21 7.32843 21 6.5C21 5.67157 20.3284 5 19.5 5H6C4.34315 5 3 6.34315 3 8V16C3 17.6569 4.34315 19 6 19H17.5C18.3284 19 19 18.3284 19 17.5C19 16.6716 18.3284 16 17.5 16H17" stroke="white" strokeWidth="2" strokeLinecap="round" />
@@ -274,65 +293,44 @@ const SideBar = () => {
                                     <path d="M15 11.5H8" stroke="white" strokeWidth="2" strokeLinecap="round" />
                                 </svg>
                             </div>
-                            <h1 className="text-xl font-bold tracking-tight">Sysgrate</h1>
-                        </div>
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="text-blue-200 hover:text-white transition-colors rounded-full p-1 hover:bg-blue-700/40"
-                        >
-                            <X size={20} />
                         </button>
-                    </>
-                ) : (
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="mx-auto text-blue-200 hover:text-white transition-colors"
-                    >
-                        <div className="bg-gradient-to-br from-blue-500 to-indigo-700 p-1.5 rounded-lg shadow-md flex items-center justify-center w-8 h-8">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M17 8H19.5C20.3284 8 21 7.32843 21 6.5C21 5.67157 20.3284 5 19.5 5H6C4.34315 5 3 6.34315 3 8V16C3 17.6569 4.34315 19 6 19H17.5C18.3284 19 19 18.3284 19 17.5C19 16.6716 18.3284 16 17.5 16H17" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                                <path d="M12.5 8.5L15.5 11.5L12.5 14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M15 11.5H8" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                        </div>
-                    </button>
-                )}
-            </div>
-            <nav className='flex flex-col justify-between h-full'>
-                {sidebarOpen && (
-                    <p className="text-xs text-blue-300 uppercase tracking-wider m-5 font-medium">
-                        Dashboard
-                    </p>
-                )}
-                <div className="px-4 max-h-135 overflow-y-auto">
-                    {RenderSideBarOptions(navItems)}
-                </div>
-                <div className={`p-4 mt-auto border-t border-blue-700/50 ${sidebarOpen ? '' : 'flex justify-center'}`}>
-                    {sidebarOpen ? (
-                        <div className="flex items-center justify-between">
-                            <div className='flex'>
-                                <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-medium">
-                                    {userRole?.role.split('')[0]?.toUpperCase() || 'S'}
-                                </div>
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium text-white">{userRole?.role}</p>
-                                    <p className="text-xs text-blue-300">{email}</p>
-                                </div>
-                            </div>
-                            <div className='border-2 w-8 h-8 rounded-full cursor-pointer flex items-center justify-center hover:bg-white hover:text-blue-700'>
-                                <button onClick={handleLogout}>
-                                    <LogOut className='cursor-pointe' size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold">
-                            {userRole?.role.split('')[0]?.toUpperCase() || 'S'}
-                        </div>
                     )}
                 </div>
-            </nav>
-        </div>
+                <nav className='flex flex-col justify-between h-full'>
+                    {sidebarOpen && (
+                        <p className="text-xs text-blue-300 uppercase tracking-wider m-5 font-medium">
+                            Dashboard
+                        </p>
+                    )}
+                    <div className="px-4 max-h-135 overflow-y-auto">
+                        {RenderSideBarOptions(navItems)}
+                    </div>
+                    <div className={`p-4 mt-auto border-t border-blue-700/50 ${sidebarOpen ? '' : 'flex justify-center'}`}>
+                        {sidebarOpen ? (
+                            <div onClick={()=> setEditProfile(!editProfile)} className="flex items-center justify-between">
+                                <div className='flex items-center'>
+                                    <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-medium">
+                                        <UserPen size={18} />
+                                    </div>
+                                    <div className="ml-3">
+                                        <p className="text-sm font-medium text-white">{userRole?.role}</p>
+                                        <p className="text-xs text-blue-300">{email}</p>
+                                    </div>
+                                </div>
+                                <EllipsisVertical className='cursor-pointer'/>
+                            </div>
+                        ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold">
+                                {userRole?.role.split('')[0]?.toUpperCase() || 'S'}
+                            </div>
+                        )}
+                    </div>
+                </nav>
+            </div>
+            <>
+            {editProfile && <UserProfile onClose={() => setEditProfile(false)} />}
+            </>
+        </>
     );
 };
 

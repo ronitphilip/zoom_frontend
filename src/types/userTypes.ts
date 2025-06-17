@@ -28,6 +28,7 @@ export interface UserResponseBody {
   token?: string;
   data?: UserAttributes | EncryptionResult;
   success: boolean;
+  user?: UserAttributes;
   error?: string;
   response? : [key: object]
 }

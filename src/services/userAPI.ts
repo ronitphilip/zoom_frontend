@@ -13,6 +13,7 @@ export const fetchAllUsersAPI = async (header: Headers): Promise<ResponseData> =
 export const fetchAllRolesAPI = async (header: Headers): Promise<ResponseData> => {
     return await commonAPI('GET', `${server_url}/roles/all-roles`, null, header);
 }
+
 export const updateUserAPI = async (id: string, reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('PATCH', `${server_url}/users/update-user/${id}`, reqBody, header);
 }
@@ -35,5 +36,13 @@ export const assignRoleAPI = async (reqBody: UserAttributes, header: Headers): P
 
 export const deleteRoleAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('DELETE', `${server_url}/roles/delete`, reqBody, header);
+}
+
+export const resetPasswordAPI = async ( reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('PATCH', `${server_url}/users/reset-password`, reqBody, header);
+}
+
+export const fetchUserDataAPI = async (header: Headers): Promise<ResponseData> => {
+    return await commonAPI('GET', `${server_url}/users/user-data`, null, header);
 }
 
