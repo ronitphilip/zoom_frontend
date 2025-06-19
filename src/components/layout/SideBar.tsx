@@ -1,6 +1,6 @@
 'use client'
 import { decryptRole, RoleAttributes } from '@/utils/decryptRole';
-import { BarChart3, Calendar, ChevronRight, Clock, EllipsisVertical, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, TrendingUp, UserCog, UserCog2, UserPen, UserRound, Users, X } from 'lucide-react';
+import { BarChart3, Calendar, ChevronRight, Clock, EllipsisVertical, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
@@ -155,6 +155,13 @@ const SideBar = () => {
                 { id: 'manageuser', icon: <Users size={16} />, label: 'Manage Users', hasChildren: false, href: '/users/manage-users', permissionKey: 'userManagement.manageuser' },
                 { id: 'managerole', icon: <UserCog2 size={16} />, label: 'User Roles', hasChildren: false, href: '/users/user-roles', permissionKey: 'userManagement.managerole' }
             ]
+        },
+        {
+            id: 'settings',
+            icon: <Settings size={20} />,
+            label: 'Account Settings',
+            hasChildren: false,
+            href: '/settings',
         }
     ];
 
@@ -310,7 +317,7 @@ const SideBar = () => {
                             <div onClick={()=> setEditProfile(!editProfile)} className="flex items-center justify-between">
                                 <div className='flex items-center'>
                                     <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-medium">
-                                        <UserPen size={18} />
+                                        <User2 size={18} />
                                     </div>
                                     <div className="ml-3">
                                         <p className="text-sm font-medium text-white">{userRole?.role}</p>
