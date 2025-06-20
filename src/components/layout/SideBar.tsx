@@ -1,10 +1,9 @@
 'use client'
 import { decryptRole, RoleAttributes } from '@/utils/decryptRole';
-import { BarChart3, Calendar, ChevronRight, Clock, EllipsisVertical, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
+import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import UserProfile from './UserProfile';
 
 type NavItem = {
     id: string;
@@ -21,7 +20,6 @@ const SideBar = () => {
     const [expandedMap, setExpandedMap] = useState<Record<number, string>>({});
     const [userRole, setRole] = useState<RoleAttributes>();
     const [email, setEmail] = useState<string>('');
-    const [editProfile, setEditProfile] = useState<boolean>(false);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -265,6 +263,11 @@ const SideBar = () => {
             });
     };
 
+    const handleLogout = () => {
+        sessionStorage.clear();
+        router.push('/');
+    };
+
     return (
         <>
             <div className={`${sidebarOpen ? 'w-75' : 'w-20'} bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out shadow-xl flex flex-col`}>
@@ -314,7 +317,7 @@ const SideBar = () => {
                     </div>
                     <div className={`p-4 mt-auto border-t border-blue-700/50 ${sidebarOpen ? '' : 'flex justify-center'}`}>
                         {sidebarOpen ? (
-                            <div onClick={()=> setEditProfile(!editProfile)} className="flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                                 <div className='flex items-center'>
                                     <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white font-medium">
                                         <User2 size={18} />
@@ -324,7 +327,7 @@ const SideBar = () => {
                                         <p className="text-xs text-blue-300">{email}</p>
                                     </div>
                                 </div>
-                                <EllipsisVertical className='cursor-pointer'/>
+                                <button onClick={handleLogout}><LogOut className='cursor-pointer'/></button>
                             </div>
                         ) : (
                             <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold">
@@ -334,9 +337,6 @@ const SideBar = () => {
                     </div>
                 </nav>
             </div>
-            <>
-            {editProfile && <UserProfile onClose={() => setEditProfile(false)} />}
-            </>
         </>
     );
 };

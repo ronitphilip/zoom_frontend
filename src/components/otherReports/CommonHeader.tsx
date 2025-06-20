@@ -7,9 +7,10 @@ interface CommonProps {
     endDate: string;
     setStartDate: (date: string) => void;
     setEndDate: (date: string) => void;
+    fetchCallLogs: () => void;
 }
 
-const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, setStartDate, setEndDate }) => {
+const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, setStartDate, setEndDate, fetchCallLogs }) => {
     return (
         <>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -45,6 +46,8 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, setSta
                             <div className="relative">
                                 <input
                                     type="date"
+                                    value={startDate}
+                                    onChange={(e)=>setStartDate(e.target.value)}
                                     className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
                                 />
                             </div>
@@ -54,6 +57,8 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, setSta
                             <div className="relative">
                                 <input
                                     type="date"
+                                    value={endDate}
+                                    onChange={(e)=>setEndDate(e.target.value)}
                                     className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
                                 />
                             </div>
@@ -70,6 +75,7 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, setSta
                     </div>
 
                     <button
+                    onClick={fetchCallLogs}
                         className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
                     >
                         Generate Report

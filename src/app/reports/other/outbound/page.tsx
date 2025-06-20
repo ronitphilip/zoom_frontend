@@ -5,11 +5,11 @@ import CommonHeader from '@/components/otherReports/CommonHeader'
 import { Headers } from '@/services/commonAPI';
 import { fetchOutbondCallLogsAPI } from '@/services/zoomAPI';
 import { CallLogEntry, CallLogRequestBody } from '@/types/zoomTypes';
-import { formatDateTime } from '@/utils/formatters';
+import { formatDateTimeTable } from '@/utils/formatters';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useEffect, useState } from 'react'
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 20;
 
 const page = () => {
 
@@ -22,7 +22,7 @@ const page = () => {
 
   useEffect(() => {
     fetchOutBondCallLogs();
-  }, [startDate, endDate])
+  }, [])
 
   const fetchOutBondCallLogs = async () => {
     try {
@@ -81,7 +81,7 @@ const page = () => {
 
   return (
     <MainLayout>
-      <CommonHeader title={'Outbond Calls'} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
+      <CommonHeader title={'Outbond Calls'} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} fetchCallLogs={fetchOutBondCallLogs} />
       <div className="bg-white rounded-xl shadow-lg overflow-hidden h-146 flex flex-col justify-between mt-6">
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -96,30 +96,30 @@ const page = () => {
             <table className="w-full max-h-130">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No.</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Caller</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Caller No.</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Callee</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Callee No.</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Result</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Start Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">End Time</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">No.</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Caller</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Caller No.</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Callee</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Callee No.</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Duration</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Result</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">Start Time</th>
+                  <th className="px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0">End Time</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {paginatedData.length > 0 ? (
                   paginatedData.map((log: CallLogEntry, index) => (
-                    <tr key={index}>
-                      <td className="px-6 h-15 text-sm text-gray-900">{startIndex + index + 1}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.caller_name}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.caller_did_number}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.callee_name}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.callee_did_number}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.duration}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.call_result}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.start_time && formatDateTime(log.start_time)}</td>
-                      <td className="px-6 h-15 text-sm text-gray-900">{log.end_time && formatDateTime(log.end_time)}</td>
+                    <tr key={index} className='hover:bg-gray-50'>
+                      <td className="px-3 h-6 text-xs text-gray-900">{startIndex + index + 1}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.caller_name}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.caller_did_number}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.callee_name}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.callee_did_number}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.duration}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.call_result}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.start_time ? formatDateTimeTable(log.start_time) : 'N/a'}</td>
+                      <td className="px-3 h-6 text-xs text-gray-900">{log.end_time ? formatDateTimeTable(log.end_time) : 'N/a'}</td>
                     </tr>
                   ))
                 ) : (
