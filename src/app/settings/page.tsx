@@ -128,7 +128,7 @@ const AccountManagement = () => {
                 setNewAccountId('');
                 setNewClientId('');
                 setNewClientPass('');
-                await fetchAccounts(); // Refresh accounts list
+                await fetchAccounts();
             } else {
                 setFormError(result.error || 'Failed to add account');
             }
