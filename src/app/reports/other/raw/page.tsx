@@ -71,9 +71,8 @@ const Page = () => {
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-            currentPage === i ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-          }`}
+          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === i ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
         >
           {i}
         </button>
@@ -90,7 +89,9 @@ const Page = () => {
         endDate={endDate}
         setStartDate={setStartDate}
         setEndDate={setEndDate}
+        callLog={callLog}
         fetchCallLogs={fetchRawCallLogs}
+        refreshCallLogs={fetchRawCallLogs}
       />
       <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col justify-between mt-6 h-[calc(100vh-200px)]">
         {loading ? (

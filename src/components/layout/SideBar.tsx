@@ -20,6 +20,7 @@ const SideBar = () => {
     const [expandedMap, setExpandedMap] = useState<Record<number, string>>({});
     const [userRole, setRole] = useState<RoleAttributes>();
     const [email, setEmail] = useState<string>('');
+    const [isAdmin, setIsAdmin] = useState<boolean>(true);
     const pathname = usePathname();
     const router = useRouter();
 
@@ -308,12 +309,17 @@ const SideBar = () => {
                 </div>
                 <nav className='flex flex-col justify-between h-full'>
                     {sidebarOpen && (
-                        <p className="text-xs text-blue-300 uppercase tracking-wider m-5 font-medium">
-                            Dashboard
-                        </p>
+                        <div className='px-5 space-y-3 py-3'>
+                            <p className="text-xs text-blue-300 uppercase tracking-wider fo space-y-3nt-medium">Dashboard</p>
+                            <div>
+                                <button onClick={()=> setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin? 'text-blue-800 bg-white' : 'text-white'} me-3 `}>Admin</button>
+                                <button onClick={()=> setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin? 'text-white' : 'text-blue-800 bg-white'}`}>User</button>
+                            </div>
+                        </div>
                     )}
                     <div className="px-4 max-h-135 overflow-y-auto">
-                        {RenderSideBarOptions(navItems)}
+                        {
+                            isAdmin ? RenderSideBarOptions(navItems): RenderSideBarOptions([])}
                     </div>
                     <div className={`p-4 mt-auto border-t border-blue-700/50 ${sidebarOpen ? '' : 'flex justify-center'}`}>
                         {sidebarOpen ? (

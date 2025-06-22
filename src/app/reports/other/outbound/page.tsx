@@ -3,7 +3,7 @@
 import MainLayout from '@/components/layout/MainLayout'
 import CommonHeader from '@/components/otherReports/CommonHeader'
 import { Headers } from '@/services/commonAPI';
-import { fetchOutbondCallLogsAPI } from '@/services/zoomAPI';
+import { fetchOutbondCallLogsAPI, refreshCallLogsAPI } from '@/services/zoomAPI';
 import { CallLogEntry, CallLogRequestBody } from '@/types/zoomTypes';
 import { formatDateTimeTable } from '@/utils/formatters';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -50,6 +50,36 @@ const page = () => {
     }
   }
 
+    const refreshCallLogs = async () => {
+      setLoading(true);
+      setError(null);
+      setCurrentPage(1);
+      try {
+        const token = JSON.parse(sessionStorage.getItem('tk') || '"tk"');
+        const header: Headers = {
+          authorization: `Bearer ${token}`
+        };
+        const reqBody: CallLogRequestBody = {
+          from: startDate,
+          to: endDate,
+          direction: 'outbound'
+        };
+  
+        const result = await refreshCallLogsAPI(header, reqBody);
+  
+        if (result.success) {
+          setCallLog(result.data);
+        } else {
+          setError('Failed to fetch call logs');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching call logs');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
   const totalItems = callLog?.length || 0;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -81,7 +111,16 @@ const page = () => {
 
   return (
     <MainLayout>
-      <CommonHeader title={'Outbond Calls'} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} fetchCallLogs={fetchOutBondCallLogs} />
+      <CommonHeader
+        title={'Outbond Calls'}
+        startDate={startDate}
+        endDate={endDate}
+        callLog={callLog} 
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        fetchCallLogs={fetchOutBondCallLogs}
+        refreshCallLogs={refreshCallLogs}
+      />
       <div className="bg-white rounded-xl shadow-lg overflow-hidden h-146 flex flex-col justify-between mt-6">
         {loading ? (
           <div className="flex justify-center items-center h-full">

@@ -273,9 +273,9 @@ const AccountManagement = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200">
-                                            {zoomAccounts.map(account => (
+                                            {zoomAccounts.map((account, index) => (
                                                 <tr key={account.id}>
-                                                    <td className="px-6 py-4 text-sm text-gray-900">{account.id}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900">{index+1}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-900">{account.account_id}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-900">{account.client_id}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-800">
