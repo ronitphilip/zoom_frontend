@@ -20,27 +20,98 @@ interface CommonProps {
     callLog: CallLogEntry[] | null;
 }
 
-const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, callLog, setStartDate, setEndDate, fetchCallLogs, refreshCallLogs }) => {
+const getAvailableFields = (callLog: CallLogEntry[]) => {
+    const fieldDisplayNames: { [key in keyof CallLogEntry]?: string } = {
+        id: 'ID',
+        call_id: 'Call ID',
+        call_path_id: 'Call Path',
+        call_result: 'Result',
+        call_type: 'Type',
+        callee_country_code: 'Callee Country Code',
+        callee_country_iso_code: 'Callee ISO',
+        callee_did_number: 'Callee DID No.',
+        callee_email: 'Callee Email',
+        callee_ext_id: 'Callee Ext ID',
+        callee_ext_number: 'Callee Ext Number',
+        callee_ext_type: 'Callee Ext Type',
+        callee_name: 'Callee Name',
+        callee_number_type: 'Callee Number Type',
+        caller_country_code: 'Caller Country Code',
+        caller_country_iso_code: 'Caller ISO',
+        caller_did_number: 'Caller DID No.',
+        caller_name: 'Caller Name',
+        caller_number_type: 'Caller Number Type',
+        connect_type: 'Connect Type',
+        direction: 'Direction',
+        duration: 'Duration',
+        end_time: 'End Time',
+        end_to_end: 'End to End',
+        hide_caller_id: 'Hide Caller ID',
+        international: 'International',
+        recording_status: 'Recording Status',
+        site_id: 'Site ID',
+        site_name: 'Site Name',
+        start_time: 'Start Time',
+    };
 
+    const availableFields: (keyof CallLogEntry)[] = [];
+    for (const log of callLog) {
+        for (const key in log) {
+            if (
+                log[key as keyof CallLogEntry] !== null &&
+                log[key as keyof CallLogEntry] !== undefined &&
+                !availableFields.includes(key as keyof CallLogEntry)
+            ) {
+                availableFields.push(key as keyof CallLogEntry);
+            }
+        }
+    }
+
+    return availableFields
+        .filter((field) => fieldDisplayNames[field])
+        .map((field) => ({
+            key: field,
+            displayName: fieldDisplayNames[field]!,
+        }));
+};
+
+const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, callLog, setStartDate, setEndDate, fetchCallLogs, refreshCallLogs }) => {
+    
     const exportToExcel = () => {
         if (!callLog || callLog.length === 0) {
             alert('No data to export!');
             return;
         }
 
-        const data = callLog.map((log, index) => ({
-            No: index + 1,
-            Caller: log.caller_name ?? 'N/a',
-            'Caller No.': log.caller_did_number ?? 'N/a',
-            Callee: log.callee_name ?? 'N/a',
-            'Callee No.': log.callee_did_number ?? 'N/a',
-            Duration: log.duration ?? 'N/a',
-            Result: log.call_result ?? 'N/a',
-            'Start Time': log.start_time ? formatDateTimeTable(log.start_time) : 'N/a',
-            'End Time': log.end_time ? formatDateTimeTable(log.end_time) : 'N/a',
-        }));
+        const fields = getAvailableFields(callLog);
+        const data = callLog.map((log, index) => {
+            const row: { [key: string]: any } = { No: index + 1 };
+            for (const { key } of fields) {
+                let value = log[key] ?? 'N/a';
+                if (key === 'start_time' || key === 'end_time') {
+                    value = log[key] ? formatDateTimeTable(log[key] as string) : 'N/a';
+                }
+                row[key] = value;
+            }
+            return row;
+        });
 
-        const worksheet = XLSX.utils.json_to_sheet(data);
+        const headers = data.map((row) => {
+            const headerRow: { [key: string]: string } = {};
+            for (const { key, displayName } of fields) {
+                headerRow[key] = displayName;
+            }
+            return headerRow;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(data, {
+            header: ['No', ...fields.map((f) => f.key)],
+        });
+
+        XLSX.utils.sheet_add_aoa(worksheet, [['No', ...fields.map((f) => f.displayName)]], {
+            origin: 'A1',
+        });
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Call Logs');
         XLSX.writeFile(workbook, `${title}_Log.xlsx`);
@@ -52,17 +123,18 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, callLo
             return;
         }
 
-        const data = callLog.map((log, index) => ({
-            No: index + 1,
-            Caller: log.caller_name ?? 'N/a',
-            'Caller No.': log.caller_did_number ?? 'N/a',
-            Callee: log.callee_name ?? 'N/a',
-            'Callee No.': log.callee_did_number ?? 'N/a',
-            Duration: log.duration ?? 'N/a',
-            Result: log.call_result ?? 'N/a',
-            'Start Time': log.start_time ? formatDateTimeTable(log.start_time) : 'N/a',
-            'End Time': log.end_time ? formatDateTimeTable(log.end_time) : 'N/a',
-        }));
+        const fields = getAvailableFields(callLog);
+        const data = callLog.map((log, index) => {
+            const row: { [key: string]: any } = { No: index + 1 };
+            for (const { key, displayName } of fields) {
+                let value = log[key] ?? 'N/a';
+                if (key === 'start_time' || key === 'end_time') {
+                    value = log[key] ? formatDateTimeTable(log[key] as string) : 'N/a';
+                }
+                row[displayName] = value;
+            }
+            return row;
+        });
 
         const csv = Papa.unparse(data);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -79,23 +151,24 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, callLo
             return;
         }
 
+        const fields = getAvailableFields(callLog);
         const doc = new jsPDF();
         doc.text(`${title} Call Logs`, 14, 20);
 
-        const tableData = callLog.map((log, index) => [
-            index + 1,
-            log.caller_name ?? 'N/a',
-            log.caller_did_number ?? 'N/a',
-            log.callee_name ?? 'N/a',
-            log.callee_did_number ?? 'N/a',
-            log.duration ?? 'N/a',
-            log.call_result ?? 'N/a',
-            log.start_time ? formatDateTimeTable(log.start_time) : 'N/a',
-            log.end_time ? formatDateTimeTable(log.end_time) : 'N/a',
-        ]);
+        const tableData = callLog.map((log, index) => {
+            const row: string[] = [String(index + 1)];
+            for (const { key } of fields) {
+                let value = log[key] ?? 'N/a';
+                if (key === 'start_time' || key === 'end_time') {
+                    value = log[key] ? formatDateTimeTable(log[key] as string) : 'N/a';
+                }
+                row.push(String(value));
+            }
+            return row;
+        });
 
         autoTable(doc, {
-            head: [['No.', 'Caller', 'Caller No.', 'Callee', 'Callee No.', 'Duration', 'Result', 'Start Time', 'End Time']],
+            head: [['No.', ...fields.map((f) => f.displayName)]],
             body: tableData,
             startY: 30,
             theme: 'grid',

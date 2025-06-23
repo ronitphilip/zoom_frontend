@@ -72,7 +72,7 @@ export default function AgentGroupSummaryReport({
     const summary = {
       agentName: "SUMMARY",
       agentId: "",
-      staffedTime: "08:00:00", // Fixed as all agents have same staffed time
+      staffedTime: "08:00:00",
       availTime: reportData.reduce((acc, curr) => {
         const [hours, minutes, seconds] = curr.availTime.split(':').map(Number);
         return acc + hours * 3600 + minutes * 60 + seconds;

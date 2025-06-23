@@ -5,8 +5,8 @@ import React from 'react'
 
 const page = () => {
   const initialFilterCriteria = {
-    startDate: "2025-03-10",
-    endDate: "2025-03-16",
+    startDate: "2025-06-01",
+    endDate: "2025-06-23",
   };
   return (
     <MainLayout>

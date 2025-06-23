@@ -1,49 +1,48 @@
-// Agent-focused Report Types
 export interface AgentTraceRecord {
   date: string;
   time: string;
-  sequence: string;
-  state: string;
-  statusReason: string;
-  splitSkill: string;
-  queueWaitTime: string;
-  duration: string;
-  hold: string;
-  ring: string;
-  channelType: string;
-  channelSource: string;
-  deviceType: string;
-  callingParty: string;
-  interactionStatus: string;
-  responseTime: string;
-  mediaCount: string;
-  transferOut: boolean;
-  concurrentCount: string;
-  disposition: string;
+  queue: string;
+  handle_duration: number;
+  hold_duration: number;
+  wrap_up_duration: number;
+  channel: string;
+  direction: string;
+  calling_party: string;
+  transfer_initiated_count: number;
+  transfer_completed_count: number;
+  user_name: string;
+  status?: string;
+  sub_status?: string;
+  duration?: number;
 }
 
 export interface AgentSplitSkillRecord {
+  user_id: string;
+  user_name: string;
+  queue_name: string;
   date: string;
-  agentId: string;
-  agentName: string;
-  queueId: string;
-  queueName: string;
-  channelType: string;
-  channelSource: string;
-  handledCalls: number;
-  missedCalls: number;
-  refusedCalls: number;
-  acdTime: string;
-  acwTime: string;
-  outboundCalls: number;
-  outboundTime: string;
-  firstResponseTime: string;
-  holdCount: number;
-  holdDuration: string;
-  transferCount: number;
-  transferDuration: string;
-  conferenceCount: number;
-  conferenceDuration: string;
+  total_handle_duration: number;
+  total_hold_duration: number;
+  total_wrap_up_duration: number;
+  total_transfer_initiated_count: number;
+  total_transfer_completed_count: number;
+  total_handled_count: number;
+  total_outbound_handled_count: number;
+  total_inbound_handled_count: number;
+  total_ready_duration: number;
+  total_occupied_duration: number;
+}
+
+export interface ReportFilterCriteria {
+  startDate: string;
+  endDate: string;
+  agentType?: string;
+  specificAgent?: string;
+}
+
+export interface ResponseData {
+  success: boolean;
+  data: AgentSplitSkillRecord[];
 }
 
 export interface AgentGroupSummaryRecord {
