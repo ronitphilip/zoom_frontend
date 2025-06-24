@@ -17,8 +17,8 @@ export default function AgentTraceReport({
   setStartDate,
   setEndDate
 }: AgentTraceReportProps) {
-  const [agentType, setAgentType] = useState('all');
-  const [specificAgent, setSpecificAgent] = useState('all');
+  const [selectedQueue, setSelectedQueue] = useState('all');
+  const [selectedUsername, setSelectedUsername] = useState('all');
   const [reportData, setReportData] = useState<AgentTraceRecord[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -71,17 +71,25 @@ export default function AgentTraceReport({
 
   useEffect(() => {
     fetchReportData();
-  }, [startDate, endDate, agentType, specificAgent]);
+  }, []);
+  console.log(reportData);
 
   const handleViewInteraction = (record: AgentTraceRecord) => {
     console.log('Viewing interaction:', record);
   };
 
+  const uniqueQueues = Array.from(new Set(reportData.map(item => item.queue))).filter(Boolean);
+  const uniqueUsernames = Array.from(new Set(reportData.map(item => item.user_name))).filter(Boolean);
+
   // Calculate pagination
-  const totalPages = Math.ceil(reportData.length / itemsPerPage);
+  const filteredData = reportData.filter(record =>
+    (selectedQueue === 'all' || record.queue === selectedQueue) &&
+    (selectedUsername === 'all' || record.user_name === selectedUsername)
+  );
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = reportData.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div className="space-y-6">
@@ -186,54 +194,28 @@ export default function AgentTraceReport({
             </div>
             <div className="relative inline-block w-44">
               <select
-                className={`block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none ${!agentType ? 'text-gray-500' : 'text-gray-900'}`}
-                value={agentType || ""}
-                onChange={(e) => setAgentType(e.target.value)}
+                className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedQueue}
+                onChange={(e) => setSelectedQueue(e.target.value)}
               >
-                <option value="all" className="text-gray-500">Agent Type</option>
-                <option value="regular">Regular Agent</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="manager">Manager</option>
+                <option value="all" className="text-gray-500">All Queues</option>
+                {uniqueQueues.map((queue, idx) => (
+                  <option key={idx} value={queue}>{queue}</option>
+                ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-blue-600">
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </div>
             </div>
+
             <div className="relative inline-block w-44">
               <select
-                className={`block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none ${!specificAgent ? 'text-gray-500' : 'text-gray-900'}`}
-                value={specificAgent || ""}
-                onChange={(e) => setSpecificAgent(e.target.value)}
-                disabled={agentType === 'all'}
+                className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedUsername}
+                onChange={(e) => setSelectedUsername(e.target.value)}
               >
-                <option value="all" className="text-gray-500">Specific Agent</option>
-                {agentType === 'regular' && (
-                  <>
-                    <option value="agent1">John Smith</option>
-                    <option value="agent2">Jane Doe</option>
-                    <option value="agent3">Michael Brown</option>
-                  </>
-                )}
-                {agentType === 'supervisor' && (
-                  <>
-                    <option value="sup1">Sarah Johnson</option>
-                    <option value="sup2">David Wilson</option>
-                  </>
-                )}
-                {agentType === 'manager' && (
-                  <>
-                    <option value="mgr1">Robert Taylor</option>
-                    <option value="mgr2">Emily Davis</option>
-                  </>
-                )}
+                <option value="all" className="text-gray-500">All Users</option>
+                {uniqueUsernames.map((name, idx) => (
+                  <option key={idx} value={name}>{name}</option>
+                ))}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-blue-600">
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </div>
             </div>
           </div>
           <button
@@ -296,32 +278,13 @@ export default function AgentTraceReport({
                 <div>
                   <p className="text-xs font-medium text-gray-500">Most Common Channel</p>
                   <p className="text-xl font-bold text-gray-800">
-                    {/* {reportData.reduce((acc, r) => {
-                      acc[r.channel] = (acc[r.channel] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>)[Object.keys(reportData.reduce((acc, r) => {
-                      acc[r.channel] = (acc[r.channel] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>)).reduce((a, b) =>
-                      reportData.reduce((acc, r) => {
-                        acc[r.channel] = (acc[r.channel] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)[a] > reportData.reduce((acc, r) => {
-                        acc[r.channel] = (acc[r.channel] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)[b] ? a : b
-                    )] ? Object.keys(reportData.reduce((acc, r) => {
-                      acc[r.channel] = (acc[r.channel] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>)).reduce((a, b) =>
-                      reportData.reduce((acc, r) => {
-                        acc[r.channel] = (acc[r.channel] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)[a] > reportData.reduce((acc, r) => {
-                        acc[r.channel] = (acc[r.channel] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)[b] ? a : b
-                    ) : 'N/A'} */}
+                    {reportData.length > 0 ?
+                      Object.entries(
+                        reportData.reduce((acc, r) => {
+                          acc[r.channel] = (acc[r.channel] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      ).reduce((a, b) => a[1] > b[1] ? a : b)[0] : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -334,7 +297,7 @@ export default function AgentTraceReport({
                   </svg>
                 </div>
                 <div className="w-full">
-                  {(agentType === 'all' && specificAgent === 'all') ? (
+                  {(selectedQueue === 'all' && selectedUsername === 'all') ? (
                     <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
                   ) : (
                     <div className="grid grid-rows-3 gap-0 text-xs">
@@ -346,28 +309,16 @@ export default function AgentTraceReport({
                           </span>
                         </div>
                       )}
-                      {agentType !== 'all' && (
+                      {selectedQueue !== 'all' && (
                         <div className="flex items-center">
-                          <span className="text-indigo-600">Type:</span>
-                          <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                            {agentType === 'regular' ? 'Regular Agent' :
-                              agentType === 'supervisor' ? 'Supervisor' :
-                                agentType === 'manager' ? 'Manager' : agentType}
-                          </span>
+                          <span className="text-indigo-600">Queue:</span>
+                          <span className="font-medium text-indigo-900 ml-1">{selectedQueue}</span>
                         </div>
                       )}
-                      {specificAgent !== 'all' && (
+                      {selectedUsername !== 'all' && (
                         <div className="flex items-center">
                           <span className="text-indigo-600">Agent:</span>
-                          <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                            {specificAgent === 'agent1' ? 'John Smith' :
-                              specificAgent === 'agent2' ? 'Jane Doe' :
-                                specificAgent === 'agent3' ? 'Michael Brown' :
-                                  specificAgent === 'sup1' ? 'Sarah Johnson' :
-                                    specificAgent === 'sup2' ? 'David Wilson' :
-                                      specificAgent === 'mgr1' ? 'Robert Taylor' :
-                                        specificAgent === 'mgr2' ? 'Emily Davis' : specificAgent}
-                          </span>
+                          <span className="font-medium text-indigo-900 ml-1">{selectedUsername}</span>
                         </div>
                       )}
                     </div>

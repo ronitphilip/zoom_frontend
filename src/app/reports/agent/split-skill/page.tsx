@@ -8,6 +8,7 @@ const page = () => {
     startDate: "2025-06-01",
     endDate: "2025-06-23",
   };
+  
   return (
     <MainLayout>
       <AgentSplitSkillReport initialFilterCriteria={initialFilterCriteria} />

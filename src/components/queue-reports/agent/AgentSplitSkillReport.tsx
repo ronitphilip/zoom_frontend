@@ -62,7 +62,7 @@ export default function AgentSplitSkillReport({ initialFilterCriteria }: AgentSp
   // Fetch data when filter criteria change
   useEffect(() => {
     generateReport();
-  }, [filterCriteria]);
+  }, []);
 
   // Calculate pagination
   const totalPages = Math.ceil(reportData.length / itemsPerPage);
