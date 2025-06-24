@@ -1,6 +1,6 @@
 'use client'
 import { decryptRole, RoleAttributes } from '@/utils/decryptRole';
-import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
+import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneCallIcon, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, Settings2, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
@@ -90,9 +90,10 @@ const SideBar = () => {
                     label: 'Agent Reports',
                     hasChildren: true,
                     children: [
+                        { id: 'agentPerformance', icon: <UserRound size={16} />, label: 'Agent Performance', hasChildren: false, href: '/reports/agent/performance', permissionKey: 'historicalReports.agentReports' },
                         { id: 'agentTrace', icon: <UserRound size={16} />, label: 'Agent Trace Report', hasChildren: false, href: '/reports/agent/trace', permissionKey: 'historicalReports.agentReports' },
-                        { id: 'agentSkill', icon: <UserRound size={16} />, label: 'Agent Split/Skill Report', hasChildren: false, href: '/reports/agent/split-skill', permissionKey: 'historicalReports.agentReports' },
-                        { id: 'agentGroupSummary', icon: <Users size={16} />, label: 'Agent Group Summary', hasChildren: false, href: '/reports/agent/summary', permissionKey: 'historicalReports.agentReports' }
+                        { id: 'agentSkill', icon: <UserRound size={16} />, label: 'Agent Skill Report', hasChildren: false, href: '/reports/agent/split-skill', permissionKey: 'historicalReports.agentReports' },
+                        { id: 'agentGroupSummary', icon: <Users size={16} />, label: 'Group Summary', hasChildren: false, href: '/reports/agent/summary', permissionKey: 'historicalReports.agentReports' }
                     ],
                     permissionKey: 'historicalReports.agentReports'
                 },
@@ -120,18 +121,6 @@ const SideBar = () => {
                         { id: 'vdnInterval', icon: <PhoneCall size={16} />, label: 'VDN Interval Report', hasChildren: false, href: '/reports/flow/vdn-interval', permissionKey: 'historicalReports.flowReports' }
                     ],
                     permissionKey: 'historicalReports.flowReports'
-                },
-                {
-                    id: 'otherReports',
-                    icon: <BarChart3 size={16} />,
-                    label: 'Other Reports',
-                    hasChildren: true,
-                    children: [
-                        { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/reports/other/outbound', permissionKey: 'historicalReports.otherReports' },
-                        { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/reports/other/inbound', permissionKey: 'historicalReports.otherReports' },
-                        { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/reports/other/raw', permissionKey: 'historicalReports.otherReports' }
-                    ],
-                    permissionKey: 'historicalReports.otherReports'
                 }
             ],
         },
@@ -156,11 +145,40 @@ const SideBar = () => {
             ]
         },
         {
+            id: 'teamManagement',
+            icon: <Settings2 size={20}/>,
+            label: 'Team Management',
+            hasChildren: false,
+            href: '/team-management',
+        },
+        {
             id: 'settings',
             icon: <Settings size={20} />,
             label: 'Account Settings',
             hasChildren: false,
             href: '/settings',
+        }
+    ];
+
+    const phoneItems: NavItem[] = [
+        {
+            id: 'overview',
+            icon: <BarChart3 size={20} />,
+            label: 'Overview',
+            hasChildren: false,
+            href: '/dashboard',
+        },
+        {
+            id: 'otherReports',
+            icon: <PhoneCallIcon size={16} />,
+            label: 'Phone Reports',
+            hasChildren: true,
+            children: [
+                { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/reports/other/outbound', permissionKey: 'historicalReports.otherReports' },
+                { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/reports/other/inbound', permissionKey: 'historicalReports.otherReports' },
+                { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/reports/other/raw', permissionKey: 'historicalReports.otherReports' }
+            ],
+            permissionKey: 'historicalReports.otherReports'
         }
     ];
 
@@ -312,14 +330,14 @@ const SideBar = () => {
                         <div className='px-5 space-y-3 py-3'>
                             <p className="text-xs text-blue-300 uppercase tracking-wider fo space-y-3nt-medium">Dashboard</p>
                             <div>
-                                <button onClick={()=> setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin? 'text-blue-800 bg-white' : 'text-white'} me-3 `}>Admin</button>
-                                <button onClick={()=> setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin? 'text-white' : 'text-blue-800 bg-white'}`}>User</button>
+                                <button onClick={() => setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin ? 'text-blue-800 bg-white' : 'text-white'} me-3 `}>Contacts</button>
+                                <button onClick={() => setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin ? 'text-white' : 'text-blue-800 bg-white'}`}>Phones</button>
                             </div>
                         </div>
                     )}
                     <div className="px-4 max-h-135 overflow-y-auto">
                         {
-                            isAdmin ? RenderSideBarOptions(navItems): RenderSideBarOptions([])}
+                            isAdmin ? RenderSideBarOptions(navItems) : RenderSideBarOptions(phoneItems)}
                     </div>
                     <div className={`p-4 mt-auto border-t border-blue-700/50 ${sidebarOpen ? '' : 'flex justify-center'}`}>
                         {sidebarOpen ? (
@@ -333,7 +351,7 @@ const SideBar = () => {
                                         <p className="text-xs text-blue-300">{email}</p>
                                     </div>
                                 </div>
-                                <button onClick={handleLogout}><LogOut className='cursor-pointer'/></button>
+                                <button onClick={handleLogout}><LogOut className='cursor-pointer' /></button>
                             </div>
                         ) : (
                             <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold">

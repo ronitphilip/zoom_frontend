@@ -33,3 +33,36 @@ export interface CallDetailRecord {
   duration: string;
   status: string;
 }
+
+export interface VisibleColumnType {
+  [key: string]: boolean;
+}
+
+export interface PerformanceData {
+  engagementId: string;
+  date: string;
+  time: string;
+  queue: string;
+  channel: string;
+  direction: string;
+  userName: string;
+  duration: string;
+  transferInitiatedCount: number;
+  transferCompletedCount: number;
+  holdCount: number;
+  agentOfferedCount: number;
+  status: string;
+  viewInteraction: string;
+}
+
+export interface TraceData {
+  workSessionId: string;
+  date: string;
+  time: string;
+  userName: string;
+  userStatus: string;
+  userSubStatus: string;
+  teamName: string;
+  duration: string;
+  viewSession: string;
+}

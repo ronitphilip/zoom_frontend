@@ -25,7 +25,6 @@ const Page = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formData, setFormData] = useState<Role>({ id: '', role: '', permissions: {} });
   const [loading, setLoading] = useState(false);
-  console.log(roles);
 
   useEffect(() => {
     fetchAllRoles();
