@@ -6,8 +6,8 @@ import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { VisibleColumnType } from '@/types/reportTypes';
 
 const Page = () => {
-  const [startDate, setStartDate] = useState("2025-06-01");
-  const [endDate, setEndDate] = useState("2025-06-23");
+  const [startDate, setStartDate] = useState<string>("2025-06-01");
+  const [endDate, setEndDate] = useState<string>("2025-06-23");
   const [skillData, setSkillData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({

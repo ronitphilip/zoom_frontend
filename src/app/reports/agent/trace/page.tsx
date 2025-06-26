@@ -1,14 +1,25 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { TraceData, VisibleColumnType } from '@/types/reportTypes';
+import { Headers } from '@/services/commonAPI';
+import { fetchAgentQueueAPI } from '@/services/reportAPI';
+import { formatDate, formatTimeAMPM } from '@/utils/formatters';
 
 const Page = () => {
-  const [startDate, setStartDate] = useState('2025-06-01');
-  const [endDate, setEndDate] = useState('2025-06-23');
+  const [startDate, setStartDate] = useState<string>('2025-06-01');
+  const [endDate, setEndDate] = useState<string>('2025-06-23');
+  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedFormat, setSelectedFormat] = useState<string>('ASC');
+  const [selectedCount, setSelectedCount] = useState<string>('10');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
+  const [totalRecords, setTotalRecords] = useState<number>(0);
   const [traceData, setTraceData] = useState<TraceData[]>([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
     workSessionId: true,
@@ -22,86 +33,73 @@ const Page = () => {
     viewSession: true,
   });
 
-  const fetchTraceReports = useCallback(async () => {
-    const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
-    if (!token) {
+  const fetchTraceReports = async (page: number = 1, token?: string) => {
+    const authToken = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    if (!authToken) {
       console.error('No authentication token found');
       return;
     }
 
     setIsLoading(true);
     try {
-      const rawData = [
-        {
-          work_session_id: '8120876c-74f3-45fd-9dd3-2d50a410af37',
-          start_time: '2025-06-23T02:36:07Z',
-          end_time: '2025-06-24T00:29:36Z',
-          user_id: '1mn27jJ1TVKN-0ZK5bK6sw',
-          user_name: 'Melissa',
-          user_status: 'Not Ready',
-          user_sub_status: 'Forced',
-          team: { team_id: '', team_name: '' },
-          not_ready_duration: 78809000,
-        },
-        {
-          work_session_id: 'a2c2f43a-657b-4ec8-9924-a3cffc669c3f',
-          start_time: '2025-06-23T02:35:48Z',
-          end_time: '2025-06-23T02:36:04Z',
-          user_id: '1mn27jJ1TVKN-0ZK5bK6sw',
-          user_name: 'Melissa',
-          user_status: 'Ready',
-          user_sub_status: 'Idle',
-          team: { team_id: '', team_name: '' },
-          ready_duration: 16000,
-        },
-        {
-          work_session_id: 'a2c2f43a-657b-4ec8-9924-a3cffc669c3f',
-          start_time: '2025-06-23T02:35:41Z',
-          end_time: '2025-06-23T02:35:48Z',
-          user_id: '1mn27jJ1TVKN-0ZK5bK6sw',
-          user_name: 'Melissa',
-          user_status: 'Occupied',
-          user_sub_status: 'Wrapping up',
-          team: { team_id: '', team_name: '' },
-          occupied_duration: 7000,
-        },
-      ];
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        status: selectedStatus,
+        agent: selectedAgent,
+        format: selectedFormat,
+        count: parseInt(selectedCount),
+        page,
+        nextPageToken: token,
+      };
 
-      const processedData: TraceData[] = rawData.map((item) => {
-        const duration =
-          item.not_ready_duration ||
-          item.ready_duration ||
-          item.occupied_duration ||
-          Math.round((new Date(item.end_time).getTime() - new Date(item.start_time).getTime()) / 1000);
-        return {
-          workSessionId: item.work_session_id,
-          date: new Date(item.start_time).toLocaleDateString(),
-          time: new Date(item.start_time).toLocaleTimeString(),
-          userName: item.user_name,
-          userStatus: item.user_status,
-          userSubStatus: item.user_sub_status,
-          teamName: item.team.team_name || '-',
-          duration: `${Math.round(duration / 1000)} sec`,
-          viewSession: 'View',
-        };
-      });
-
-      setTraceData(processedData);
+      const header: Headers = {
+        authorization: `Bearer ${authToken}`
+      }
+      const result = await fetchAgentQueueAPI(reqBody, header)
+      if (result.success) {
+        setTraceData(result.data?.traceData);
+        setAllUsers(result.data?.users);
+        setNextPageToken(result.data?.nextPageToken);
+        setTotalRecords(result.data?.totalRecords || 0);
+        setCurrentPage(page);
+      } else {
+        console.error('Failed to fetch reports:', result.error);
+      }
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }
 
-  const refreshTraceReports = useCallback(async () => {
+  const listStatus = (data: TraceData[]): string[] => {
+    const status = new Set(data.map(item => item.user_status).filter(user_status => user_status));
+    return Array.from(status.values());
+  };
+
+  const refreshTraceReports = async () => {
     setTraceData([]);
     await fetchTraceReports();
-  }, [fetchTraceReports]);
+  };
 
   useEffect(() => {
     fetchTraceReports();
-  }, [fetchTraceReports]);
+  }, [selectedCount]);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      fetchTraceReports(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (nextPageToken || currentPage * parseInt(selectedCount) < totalRecords) {
+      fetchTraceReports(currentPage + 1, nextPageToken);
+    }
+  };
+
+  const totalPages = Math.ceil(totalRecords / parseInt(selectedCount));
 
   const summaryMetrics = [
     { label: 'Total Sessions', value: traceData.length, bgColor: 'bg-blue-100' },
@@ -109,7 +107,7 @@ const Page = () => {
       label: 'Avg Session Duration',
       value: traceData.length
         ? `${Math.round(
-          traceData.reduce((sum, row) => sum + parseInt(row.duration), 0) / traceData.length
+          traceData.reduce((sum, row) => sum + parseInt(row.occupied_duration), 0) / traceData.length
         )} sec`
         : '0 sec',
       bgColor: 'bg-orange-100',
@@ -120,9 +118,9 @@ const Page = () => {
         ? [...traceData]
           .sort(
             (a, b) =>
-              traceData.filter((row) => row.userStatus === b.userStatus).length -
-              traceData.filter((row) => row.userStatus === a.userStatus).length
-          )[0].userStatus
+              traceData.filter((row) => row.user_status === b.user_status).length -
+              traceData.filter((row) => row.user_status === a.user_status).length
+          )[0].user_status
         : 'N/A',
       bgColor: 'bg-red-100',
     },
@@ -140,6 +138,8 @@ const Page = () => {
     { key: 'viewSession', label: 'View', minWidth: '100px' },
   ];
 
+  const status = listStatus(traceData)
+
   return (
     <MainLayout>
       <ReportHeader
@@ -154,10 +154,38 @@ const Page = () => {
         visibleColumns={visibleColumns}
         setVisibleColumns={setVisibleColumns}
       >
-        <div className="flex space-x-2">
-          <p>Filter 1</p>
-          <p>Filter 2</p>
-          <p>Filter 3</p>
+        <div className="flex space-x-4">
+          <select className="border border-gray-300 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-30"
+            value={selectedAgent}
+            onChange={(e) => setSelectedAgent(e.target.value)}
+          >
+            <option value="">All Agents</option>
+            {allUsers.map((agentName, index) => (
+              <option key={index} value={agentName}>
+                {agentName}
+              </option>
+            ))}
+          </select>
+
+          <select className="border border-gray-300 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-30"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            <option value="">Channels</option>
+            {status.map((item, index) => (
+              <option key={index} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <select className="border border-gray-300 rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
+            value={selectedFormat}
+            onChange={(e) => setSelectedFormat(e.target.value)}
+          >
+            <option value="ASC">Newest First</option>
+            <option value="DESC">Oldest First</option>
+          </select>
         </div>
       </ReportHeader>
       <div className="mt-6 space-y-6">
@@ -217,13 +245,17 @@ const Page = () => {
                       </td>
                     </tr>
                   ) : traceData.length > 0 ? (
-                    traceData.map((row, index) => (
+                    traceData.map((data, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td
-                          className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900"
-                        >
-                          ---
-                        </td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.work_session_id || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{formatDate(data.start_time) || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{formatTimeAMPM(data.start_time) || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_name || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_status || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_sub_status || '-'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">-</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.occupied_duration || 0}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">view</td>
                       </tr>
                     ))
                   ) : (
@@ -240,7 +272,15 @@ const Page = () => {
             <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
               <div className="flex items-center text-xs text-gray-500">
                 <span>Showing</span>
-                <select className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white">
+                <select
+                  className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                  value={selectedCount}
+                  onChange={(e) => {
+                    setSelectedCount(e.target.value);
+                    setCurrentPage(1);
+                    setNextPageToken(undefined);
+                  }}
+                >
                   <option value="10">10</option>
                   <option value="25">25</option>
                   <option value="50">50</option>
@@ -249,11 +289,21 @@ const Page = () => {
                 <span>records per page</span>
               </div>
               <div className="flex items-center space-x-2">
-                <button className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                <button
+                  className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                >
                   Previous
                 </button>
-                <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">1</span>
-                <button className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50">
+                <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
+                  {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={handleNextPage}
+                  disabled={!nextPageToken && currentPage * parseInt(selectedCount) >= totalRecords}
+                >
                   Next
                 </button>
               </div>

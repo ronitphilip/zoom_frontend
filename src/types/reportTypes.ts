@@ -39,30 +39,30 @@ export interface VisibleColumnType {
 }
 
 export interface PerformanceData {
-  engagementId: string;
-  date: string;
+  engagement_id: string;
+  start_time: string;
   time: string;
-  queue: string;
+  queue_name: string;
   channel: string;
   direction: string;
-  userName: string;
-  duration: string;
-  transferInitiatedCount: number;
-  transferCompletedCount: number;
-  holdCount: number;
-  agentOfferedCount: number;
+  user_name: string;
+  conversation_duration: string;
+  transfer_initiated_count: number;
+  transfer_completed_count: number;
+  hold_count: number;
+  agent_offered_count: number;
   status: string;
   viewInteraction: string;
 }
 
 export interface TraceData {
-  workSessionId: string;
-  date: string;
-  time: string;
-  userName: string;
-  userStatus: string;
-  userSubStatus: string;
-  teamName: string;
-  duration: string;
-  viewSession: string;
+  work_session_id: string;
+  start_time: string;
+  time?: string;
+  user_name: string;
+  user_status: string;
+  user_sub_status: string;
+  teamName?: string;
+  occupied_duration: string;
+  viewSession?: string;
 }

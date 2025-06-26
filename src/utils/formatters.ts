@@ -14,6 +14,18 @@ export function formatDateTime(dateString: string): string {
   return date.toLocaleString();
 }
 
+/**
+ * Format a date string to only time in 12-hour AM/PM format (e.g., "2:30 PM")
+ */
+export function formatTimeAMPM(dateString: string): string {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
+}
+
 export const formatDateTimeTable = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('en-GB', {

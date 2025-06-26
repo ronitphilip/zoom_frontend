@@ -6,8 +6,8 @@ import { User } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 
 const Page = () => {
-  const [startDate, setStartDate] = useState("2025-06-01");
-  const [endDate, setEndDate] = useState("2025-06-23");
+  const [startDate, setStartDate] = useState<string>("2025-06-01");
+  const [endDate, setEndDate] = useState<string>("2025-06-23");
   const [groupSummaryData, setGroupSummaryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
