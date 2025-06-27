@@ -56,7 +56,9 @@ const Page = () => {
       const header: Headers = {
         authorization: `Bearer ${authToken}`
       }
-      const result = await fetchAgentQueueAPI(reqBody, header)
+      const result = await fetchAgentQueueAPI(reqBody, header);
+      console.log(result);
+      
       if (result.success) {
         setTraceData(result.data?.traceData);
         setAllUsers(result.data?.users);

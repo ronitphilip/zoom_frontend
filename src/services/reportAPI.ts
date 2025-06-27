@@ -8,3 +8,7 @@ export const fetchAgentPerfomanceAPI = async (reqBody: any, header: Headers): Pr
 export const fetchAgentQueueAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('POST', `${server_url}/reports/time-card`, reqBody, header);
 }
+
+export const fetchGroupSummaryAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('POST', `${server_url}/reports/group-summary`, reqBody, header);
+}

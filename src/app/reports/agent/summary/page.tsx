@@ -1,6 +1,8 @@
 'use client'
 import MainLayout from '@/components/layout/MainLayout';
 import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
+import { Headers } from '@/services/commonAPI';
+import { fetchGroupSummaryAPI } from '@/services/reportAPI';
 import { VisibleColumnType } from '@/types/reportTypes';
 import { User } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,24 +10,27 @@ import React, { useState, useEffect, useCallback } from 'react';
 const Page = () => {
   const [startDate, setStartDate] = useState<string>("2025-06-01");
   const [endDate, setEndDate] = useState<string>("2025-06-23");
+  const [teamName, setTeamName] = useState<string>("");
+  const [allTeams, setAllTeams] = useState([]);
+  const [channel, setChannel] = useState<string>("");
   const [groupSummaryData, setGroupSummaryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
-    teamName: true,
-    totalInteractions: true,
-    avgHandleDuration: true,
-    totalHoldCount: true,
-    avgWrapUpDuration: true,
-    channel: true,
-    direction: true,
-    transferInitiatedCount: true,
-    transferCompletedCount: true,
-    totalReadyDuration: true,
-    totalNotReadyDuration: true,
-    totalOccupiedDuration: true,
-    queueName: true,
+    team_name: true,
+    total_interactions: true,
+    avg_handle_duration: true,
+    total_hold_count: true,
+    avg_wrap_up_duration: true,
+    channels: true,
+    directions: true,
+    transfer_initiated: true,
+    transfer_completed: true,
+    total_ready_duration: true,
+    total_not_ready_duration: true,
+    total_occupied_duration: true,
+    queues: true,
     status: true,
-    subStatus: true,
+    sub_status: true,
   });
 
   useEffect(() => {
@@ -44,24 +49,28 @@ const Page = () => {
 
     setIsLoading(true);
     try {
-      // const headers = { Authorization: `Bearer ${token}` };
-      //   const response = await fetch('/api/reports/agent/summary', {
-      //     method: 'POST',
-      //     headers,
-      //     body: JSON.stringify({ startDate, endDate }),
-      //   });
-      //   const result = await response.json();
-      //   if (result.success) {
-      //     setGroupSummaryData(result.data);
-      //   } else {
-      //     console.error('Failed to fetch reports:', result.error);
-      //   }
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        team_name: teamName,
+        channel: channel,
+      };
+      const headers: Headers = { Authorization: `Bearer ${token}` };
+      const result = await fetchGroupSummaryAPI(reqBody, headers);
+      console.log(result);
+
+      if (result.success) {
+        setGroupSummaryData(result.data?.summary);
+        setAllTeams(result.data?.allteams);
+      } else {
+        console.error('Failed to fetch reports:', result.error);
+      }
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startDate, endDate, teamName, channel]);
 
   const refreshSummaryReports = useCallback(async () => {
     setGroupSummaryData([]);
@@ -79,21 +88,21 @@ const Page = () => {
   ];
 
   const columnHeaders = [
-    { key: 'teamName', label: 'Team Name', minWidth: '150px' },
-    { key: 'totalInteractions', label: 'Total Interactions', minWidth: '120px' },
-    { key: 'avgHandleDuration', label: 'Avg Handle Duration', minWidth: '120px' },
-    { key: 'totalHoldCount', label: 'Total Hold Count', minWidth: '120px' },
-    { key: 'avgWrapUpDuration', label: 'Avg Wrap Up Duration', minWidth: '120px' },
-    { key: 'channel', label: 'Channel', minWidth: '120px' },
-    { key: 'direction', label: 'Direction', minWidth: '120px' },
-    { key: 'transferInitiatedCount', label: 'Transfer Initiated', minWidth: '120px' },
-    { key: 'transferCompletedCount', label: 'Transfer Completed', minWidth: '120px' },
-    { key: 'totalReadyDuration', label: 'Total Ready Duration', minWidth: '120px' },
-    { key: 'totalNotReadyDuration', label: 'Total Not Ready Duration', minWidth: '120px' },
-    { key: 'totalOccupiedDuration', label: 'Total Occupied Duration', minWidth: '120px' },
-    { key: 'queueName', label: 'Queue Name', minWidth: '120px' },
+    { key: 'team_name', label: 'Team Name', minWidth: '150px' },
+    { key: 'total_interactions', label: 'Total Interactions', minWidth: '120px' },
+    { key: 'avg_handle_duration', label: 'Avg Handle Duration', minWidth: '120px' },
+    { key: 'total_hold_count', label: 'Total Hold Count', minWidth: '120px' },
+    { key: 'avg_wrap_up_duration', label: 'Avg Wrap Up Duration', minWidth: '120px' },
+    { key: 'channels', label: 'Channel', minWidth: '120px' },
+    { key: 'directions', label: 'Direction', minWidth: '120px' },
+    { key: 'transfer_initiated', label: 'Transfer Initiated', minWidth: '120px' },
+    { key: 'transfer_completed', label: 'Transfer Completed', minWidth: '120px' },
+    { key: 'total_ready_duration', label: 'Total Ready Duration', minWidth: '120px' },
+    { key: 'total_not_ready_duration', label: 'Total Not Ready Duration', minWidth: '120px' },
+    { key: 'total_occupied_duration', label: 'Total Occupied Duration', minWidth: '120px' },
+    { key: 'queues', label: 'Queue Name', minWidth: '120px' },
     { key: 'status', label: 'Status', minWidth: '120px' },
-    { key: 'subStatus', label: 'Sub Status', minWidth: '120px' },
+    { key: 'sub_status', label: 'Sub Status', minWidth: '120px' },
   ];
 
   return (
@@ -111,13 +120,32 @@ const Page = () => {
         setVisibleColumns={setVisibleColumns}
       >
         <div className="flex space-x-2">
-          <p>Filter 1</p>
-          <p>Filter 2</p>
-          <p>Filter 3</p>
+          <select
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+          >
+            <option value="">All Teams</option>
+            {allTeams.map((team: { team_name: string }, index: number) => (
+              <option key={index} value={team.team_name}>
+                {team.team_name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+          >
+            <option value="">All Channels</option>
+            <option value="voice">Voice</option>
+            <option value="video">Video</option>
+            <option value="messaging">Messaging</option>
+          </select>
         </div>
       </ReportHeader>
-      <div className="mt-6 space-y-6">
 
+      <div className="mt-6 space-y-6">
         <div className="bg-white rounded-lg shadow">
           <div className="flex flex-wrap divide-x divide-gray-200">
             {summaryMetrics.map((metric, index) => (
@@ -178,12 +206,10 @@ const Page = () => {
                         {columnHeaders.map(
                           (header) =>
                             visibleColumns[header.key as keyof VisibleColumnType] && (
-                              <td
-                                key={`${header.key}-${index}`}
-                                className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900"
-                                style={{ minWidth: header.minWidth }}
-                              >
-                                {row[header.key] || '-'}
+                              <td key={header.key} className="px-3 py-1.5 whitespace-nowrap">
+                                {Array.isArray(row[header.key])
+                                  ? row[header.key].join(", ")
+                                  : row[header.key] || "-"}
                               </td>
                             ),
                         )}

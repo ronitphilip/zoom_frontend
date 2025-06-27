@@ -1,4 +1,4 @@
-export interface TeamMemeber {
+export interface TeamMember {
     user_id?: string;
     name?: string;
 }
@@ -6,5 +6,10 @@ export interface TeamMemeber {
 export interface TeamAttributes {
     id?: number;
     team_name: string;
-    team_members: TeamMemeber[];
+    team_members: TeamMember[];
+}
+
+export interface TeamUser {
+  user_id: string;
+  name: string;
 }

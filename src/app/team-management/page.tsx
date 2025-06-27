@@ -1,7 +1,7 @@
 'use client'
 import MainLayout from '@/components/layout/MainLayout'
 import Modal from '@/components/layout/Modal'
-import { TeamAttributes, TeamMemeber } from '@/types/teamTypes'
+import { TeamAttributes, TeamMember, TeamUser } from '@/types/teamTypes'
 import { Plus, Search, User } from 'lucide-react'
 import React, { useState, useEffect, useMemo } from 'react'
 import { fetchTeamssAPI, createTeamssAPI, updateTeamsAPI, deleteTeamsAPI } from '@/services/teamAPI'
@@ -9,9 +9,9 @@ import { Headers } from '@/services/commonAPI'
 
 const page = () => {
     const [teamName, setTeamName] = useState<string>('');
-    const [teamMembers, setTeamMembers] = useState<TeamMemeber[]>([]);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamData, setTeamData] = useState<TeamAttributes[]>([]);
-    const [userData, setUserData] = useState<string[]>([]);
+    const [userData, setUserData] = useState<TeamUser[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [editingTeam, setEditingTeam] = useState<TeamAttributes | null>(null);
@@ -22,7 +22,7 @@ const page = () => {
     const summaryMetrics = useMemo(() => [
         { 
             label: 'Total Teams', 
-            value: teamData.length.toString(), 
+            value: teamData?.length.toString(), 
             bgColor: 'bg-blue-100' 
         },
         { 
@@ -133,17 +133,16 @@ const page = () => {
         setIsCreateModalOpen(true);
     };
 
-    const handleAddUser = (user: string) => {
-        if (!teamMembers.some(member => member.name === user)) {
-            setTeamMembers([...teamMembers, { name: user }]);
+    const handleAddUser = (user: TeamUser) => {
+        if (!teamMembers.some(member => member.user_id === user.user_id)) {
+            setTeamMembers([...teamMembers, { user_id: user.user_id, name: user.name }]);
         }
     };
 
-    const handleRemoveUser = (user: string) => {
-        setTeamMembers(teamMembers.filter(member => member.name !== user));
+    const handleRemoveUser = (user_id: string) => {
+        setTeamMembers(teamMembers.filter(member => member.user_id !== user_id));
     };
 
-    // Enhanced search functionality
     const filteredTeams = useMemo(() => {
         if (!searchTerm.trim()) return teamData;
         const lowerSearch = searchTerm.toLowerCase();
@@ -166,7 +165,7 @@ const page = () => {
             <div>
                 <h2 className="text-xl font-bold text-blue-800">Manage Teams</h2>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6">
+                <div className="flex flex-col sm:flex-row justify-between items-startEADstart sm:items-center gap-4 mt-6">
                     <div className="relative w-full sm:w-1/3">
                         <input
                             type="text"
@@ -271,7 +270,7 @@ const page = () => {
                         </div>
                         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
                             <div className="flex items-center text-sm text-gray-500">
-                                <span>Showing</span>
+                                <span> show</span>
                                 <select className="mx-2 border border-gray-300 rounded px-3 py-1 bg-white">
                                     <option value="10">10</option>
                                     <option value="25">25</option>
@@ -325,22 +324,22 @@ const page = () => {
                             <div className="mt-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3">
                                 {userData.length > 0 ? (
                                     userData.map((user, index) => (
-                                        <div key={index} className="flex items-center p-2 hover:bg-gray-50">
+                                        <div key={user.user_id} className="flex items-center p-2 hover:bg-gray-50">
                                             <input
                                                 type="checkbox"
-                                                id={`user-${index}`}
-                                                checked={teamMembers.some(member => member.name === user)}
+                                                id={`user-${user.user_id}`}
+                                                checked={teamMembers.some(member => member.user_id === user.user_id)}
                                                 onChange={(e) => {
                                                     if (e.target.checked) {
                                                         handleAddUser(user);
                                                     } else {
-                                                        handleRemoveUser(user);
+                                                        handleRemoveUser(user.user_id);
                                                     }
                                                 }}
                                                 className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                             />
-                                            <label htmlFor={`user-${index}`} className="ml-3 text-sm text-gray-900">
-                                                {user}
+                                            <label htmlFor={`user-${user.user_id}`} className="ml-3 text-sm text-gray-900">
+                                                {user.name}
                                             </label>
                                         </div>
                                     ))
