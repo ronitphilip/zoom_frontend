@@ -66,3 +66,26 @@ export interface TraceData {
   occupied_duration: string;
   viewSession?: string;
 }
+
+export interface AgentEngagementAttributes {
+  id?: string;
+  engagement_id: string;
+  direction: string;
+  start_time: string;
+  channel: string;
+  consumer: string;
+  dnis: string;
+  ani: string;
+  queue_name: string;
+  user_name: string;
+  duration: number;
+  hold_count: number;
+  warm_transfer_initiated_count: number;
+  warm_transfer_completed_count: number;
+  direct_transfer_count: number;
+  transfer_initiated_count: number;
+  transfer_completed_count: number;
+  warm_conference_count: number;
+  conference_count: number;
+  abandoned_count: number;
+}

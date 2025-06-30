@@ -2,10 +2,10 @@
 import MainLayout from '@/components/layout/MainLayout';
 import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { Headers } from '@/services/commonAPI';
-import { fetchGroupSummaryAPI } from '@/services/reportAPI';
+import { fetchGroupSummaryAPI, refreshGroupSummaryAPI } from '@/services/reportAPI';
 import { VisibleColumnType } from '@/types/reportTypes';
 import { User } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Page = () => {
   const [startDate, setStartDate] = useState<string>("2025-06-01");
@@ -40,7 +40,7 @@ const Page = () => {
     }
   }, [groupSummaryData]);
 
-  const fetchSummaryReports = useCallback(async () => {
+  const fetchSummaryReports = async () => {
     const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
     if (!token) {
       console.error('No authentication token found');
@@ -70,16 +70,43 @@ const Page = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate, teamName, channel]);
+  };
 
-  const refreshSummaryReports = useCallback(async () => {
+  const refreshSummaryReports = async () => {
+    const tokenStorage = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    if (!tokenStorage) {
+      console.error('No authentication token found');
+      return;
+    }
+
+    setIsLoading(true);
     setGroupSummaryData([]);
-    await fetchSummaryReports();
-  }, [fetchSummaryReports]);
+
+    try {
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+      };
+      console.log('Refresh request body:', reqBody);
+
+      const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
+      const result = await refreshGroupSummaryAPI(reqBody, headers);
+
+      if (result.success) {
+        fetchSummaryReports();
+      } else {
+        console.error('Failed to refresh reports:', result.error);
+      }
+    } catch (error) {
+      console.error('Error refreshing reports:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchSummaryReports();
-  }, [fetchSummaryReports]);
+  }, []);
 
   const summaryMetrics = [
     { label: 'Total Teams', value: '10', bgColor: 'bg-blue-100' },

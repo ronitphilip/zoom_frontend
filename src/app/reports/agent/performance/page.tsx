@@ -4,7 +4,7 @@ import { User } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { PerformanceData, VisibleColumnType } from '@/types/reportTypes';
-import { fetchAgentPerfomanceAPI } from '@/services/reportAPI';
+import { fetchAgentPerfomanceAPI, refreshAgentPerformanceAPI } from '@/services/reportAPI';
 import { Headers } from '@/services/commonAPI';
 import { formatDate, formatTimeAMPM } from '@/utils/formatters';
 
@@ -80,16 +80,49 @@ const Page = () => {
         }
     };
 
-    const listChannels = (data: PerformanceData[]): string[] => {
-        const channelSet = new Set(data.map(item => item.channel).filter(channel => channel));
-        return Array.from(channelSet.values());
-    };
-
-    const refreshPerformanceReports = async () => {
+    const fetchReports = async () => {
         setPerformanceData([]);
         setCurrentPage(1);
         setNextPageToken(undefined);
         await fetchPerformanceReports(1);
+    };
+
+    const refreshPerformanceReports = async () => {
+        const tokenStorage = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+        if (!tokenStorage) {
+            console.error('No authentication token found');
+            return;
+        }
+
+        setIsLoading(true);
+        setPerformanceData([]);
+        setCurrentPage(1);
+        setNextPageToken(undefined);
+
+        try {
+            const reqBody = {
+                from: startDate,
+                to: endDate,
+            };
+            console.log('Refresh request body:', reqBody);
+
+            const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
+            const result = await refreshAgentPerformanceAPI(reqBody, headers);
+
+            if (result.success) {
+                setPerformanceData(result.data.performance || []);
+                setAllUsers(result.data.users || []);
+                setNextPageToken(result.data?.nextPageToken);
+                setTotalRecords(result.data?.totalRecords || 0);
+                setCurrentPage(1);
+            } else {
+                console.error('Failed to refresh reports:', result.error);
+            }
+        } catch (error) {
+            console.error('Error refreshing reports:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -151,7 +184,7 @@ const Page = () => {
         { key: 'viewInteraction', label: '', minWidth: '100px' },
     ];
 
-    const channels = listChannels(performanceData);
+    const channels = ['voice', 'messaging', 'video', 'email'];
 
     return (
         <MainLayout>
@@ -163,7 +196,7 @@ const Page = () => {
                 visibleColumns={visibleColumns}
                 setStartDate={setStartDate}
                 setEndDate={setEndDate}
-                fetchReports={refreshPerformanceReports}
+                fetchReports={fetchReports}
                 refreshReports={refreshPerformanceReports}
                 setVisibleColumns={setVisibleColumns}
             >
