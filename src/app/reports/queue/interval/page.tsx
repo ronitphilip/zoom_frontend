@@ -4,11 +4,11 @@ import SplitSkillSummaryIntervalReport from '@/components/queue-reports/skill/Sp
 import React, { useState } from 'react'
 
 const page = () => {
-  const [startDate, setStartDate] = useState("2025-03-10");
-  const [endDate, setEndDate] = useState("2025-03-16");
+  const [startDate, setStartDate] = useState("2025-06-10");
+  const [endDate, setEndDate] = useState("2025-06-16");
   return (
     <MainLayout>
-      <SplitSkillSummaryIntervalReport 
+      <SplitSkillSummaryIntervalReport
         startDate={startDate}
         endDate={endDate}
         setStartDate={setStartDate}

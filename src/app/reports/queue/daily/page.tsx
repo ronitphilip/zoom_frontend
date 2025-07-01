@@ -1,16 +1,17 @@
 'use client'
 import MainLayout from '@/components/layout/MainLayout'
 import SplitSkillDailyReport from '@/components/queue-reports/skill/SplitSkillDailyReport'
-import React from 'react'
+import React, { useState } from 'react'
 
 const page = () => {
-  const initialFilterCriteria = {
-    startDate: "2025-03-10",
-    endDate: "2025-03-10",
-  };
+  const [startDate, setStartDate] = useState("2025-05-10");
+  const [endDate, setEndDate] = useState("2025-05-16");
   return (
     <MainLayout>
-      <SplitSkillDailyReport initialFilterCriteria={initialFilterCriteria}/>
+      <SplitSkillDailyReport startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate} />
     </MainLayout>
   )
 }
