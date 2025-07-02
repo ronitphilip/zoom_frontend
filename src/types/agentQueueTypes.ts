@@ -40,3 +40,21 @@ export interface RecordSummary {
   transferCount: number;
   voiceCalls: number;
 }
+
+export interface AgentAbandonedReport {
+  startTime: string;
+  engagementId: string;
+  direction: string;
+  consumerNumber: string;
+  consumerId: string;
+  consumerDisplayName: string;
+  queueId: string;
+  queueName: string;
+  agentId: string;
+  agentName: string;
+  channel: string;
+  queueWaitType: string;
+  waitingDuration: number;
+  voiceMail: number;
+  transferCount: number;
+}

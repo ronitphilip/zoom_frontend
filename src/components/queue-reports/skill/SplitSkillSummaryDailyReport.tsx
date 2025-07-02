@@ -23,12 +23,11 @@ export default function SplitSkillSummaryDailyReport({
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
+  
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
     queueId: true,
     queueName: true,
-    agentId: true,
-    agentName: true,
     totalOffered: true,
     totalAnswered: true,
     abandonedCalls: true,
@@ -68,11 +67,10 @@ export default function SplitSkillSummaryDailyReport({
         to: endDate,
         count: itemsPerPage,
         page,
-        nextPageToken: nextPageToken,
+        nextPageToken,
+        queueId: selectedQueue !== 'all' && selectedQueue
       };
       const result = await fetchDailyAgentQueuesAPI(reqBody, header);
-      console.log(result);
-      
       if (result.success) {
         setReportData(result?.data?.reports || []);
         setNextPageToken(result?.data?.nextPageToken || null);
@@ -119,8 +117,6 @@ export default function SplitSkillSummaryDailyReport({
       date: "SUMMARY",
       queueId: "",
       queueName: "",
-      agentId: "",
-      agentName: "",
       totalOffered: reportData.reduce((acc, curr) => acc + curr.totalOffered, 0),
       totalAnswered: reportData.reduce((acc, curr) => acc + curr.totalAnswered, 0),
       abandonedCalls: reportData.reduce((acc, curr) => acc + curr.abandonedCalls, 0),
@@ -157,6 +153,7 @@ export default function SplitSkillSummaryDailyReport({
 
   return (
     <div className="space-y-6">
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Split/Skill Summary Daily Report</h2>
         <div className="flex flex-wrap gap-2">
@@ -208,7 +205,7 @@ export default function SplitSkillSummaryDailyReport({
               </div>
             )}
           </div>
-          <button onClick={()=>fetchReports()} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={() => fetchReports()} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -216,6 +213,7 @@ export default function SplitSkillSummaryDailyReport({
           </button>
         </div>
       </div>
+
       <div className="bg-white rounded-lg shadow w-full p-4">
         <div className="flex items-center justify-between flex-wrap">
           <div className="flex items-center space-x-4">
@@ -260,13 +258,14 @@ export default function SplitSkillSummaryDailyReport({
             </div>
           </div>
           <button
-            onClick={()=>fetchReports()}
+            onClick={() => fetchReports()}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
             Generate Report
           </button>
         </div>
       </div>
+
       <div className="bg-white rounded-lg shadow">
         <div className="flex flex-wrap divide-x divide-gray-200">
           <div className="flex-1 py-3 px-4">
@@ -343,6 +342,7 @@ export default function SplitSkillSummaryDailyReport({
           </div>
         </div>
       </div>
+
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
         <div className="flex flex-col" style={{ height: "calc(98vh - 320px)" }}>
           <div className="overflow-auto flex-grow">
@@ -352,8 +352,6 @@ export default function SplitSkillSummaryDailyReport({
                   {visibleColumns.date && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>}
                   {visibleColumns.queueId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Queue ID</th>}
                   {visibleColumns.queueName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Queue Name</th>}
-                  {visibleColumns.agentId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent ID</th>}
-                  {visibleColumns.agentName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Agent Name</th>}
                   {visibleColumns.totalOffered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>}
                   {visibleColumns.totalAnswered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>}
                   {visibleColumns.abandonedCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>}
@@ -373,8 +371,6 @@ export default function SplitSkillSummaryDailyReport({
                   {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>}
                   {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueId}</td>}
                   {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueName}</td>}
-                  {visibleColumns.agentId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentId}</td>}
-                  {visibleColumns.agentName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentName}</td>}
                   {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>}
                   {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>}
                   {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>}
@@ -393,8 +389,6 @@ export default function SplitSkillSummaryDailyReport({
                     {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>}
                     {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
                     {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueName}</td>}
-                    {visibleColumns.agentId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentId || 'N/A'}</td>}
-                    {visibleColumns.agentName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentName || 'N/A'}</td>}
                     {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered}</td>}
                     {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered}</td>}
                     {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls}</td>}
@@ -414,23 +408,25 @@ export default function SplitSkillSummaryDailyReport({
           </div>
         </div>
         <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-          <div className="flex items-center text-xs text-gray-500">
-            <span>Showing</span>
-            <select
-              className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-                setNextPageToken(undefined);
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>records per page</span>
+          <div className="flex items-center text-xs text-gray-500 space-x-4">
+            <div className="flex items-center">
+              <span>Showing</span>
+              <select
+                className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                  setNextPageToken(undefined);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>of {totalRecords}</span>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -441,7 +437,7 @@ export default function SplitSkillSummaryDailyReport({
               Previous
             </button>
             <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
-              {currentPage}
+              Page {currentPage} of {totalPages}
             </span>
             <button
               className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50"
@@ -459,7 +455,7 @@ export default function SplitSkillSummaryDailyReport({
   function formatTime(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 }

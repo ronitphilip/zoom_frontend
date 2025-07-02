@@ -16,3 +16,7 @@ export const fetchIntervalAgentQueuesAPI = async (reqBody: any, header: Headers)
 export const fetchAbandonedCallsAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('POST', `${server_url}/queues/abandoned-calls`, reqBody, header);
 }
+
+export const getAgentAbandonedReportAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('POST', `${server_url}/queues/abandoned-report`, reqBody, header);
+}

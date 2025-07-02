@@ -18,6 +18,7 @@ export default function SplitSkillDailyReport({
   setEndDate,
 }: SplitSkillDailyReportProps) {
   const [reportData, setReportData] = useState<SkillRecord[]>([]);
+  const [allAgents, setAllAgents] = useState([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function SplitSkillDailyReport({
 
   useEffect(() => {
     fetchReports(1, null);
-  }, [startDate, endDate, queueId, itemsPerPage]);
+  }, [itemsPerPage]);
 
   const fetchReports = async (page: number = 1, pageToken: string | null = null) => {
     const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
@@ -74,8 +75,11 @@ export default function SplitSkillDailyReport({
       };
 
       const result = await fetchAgentQueuesAPI(reqBody, header);
+      console.log(result);
+      
       if (result.success) {
         setReportData(result.data.reports || []);
+        setAllAgents(result.data.agents || []);
         setNextPageToken(result.data.nextPageToken || null);
         setTotalRecords(result.data.totalRecords || 0);
         setCurrentPage(page);
@@ -120,6 +124,7 @@ export default function SplitSkillDailyReport({
     }));
   };
 
+  const uniqueQueues = Array.from(new Set(reportData.map(item => item.queue_name))).filter(Boolean);
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
   const currentItems = reportData;
 
@@ -169,6 +174,8 @@ export default function SplitSkillDailyReport({
 
   return (
     <div className="space-y-6">
+
+      {/* header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Split/Skill Daily Report</h2>
         <div className="flex flex-wrap gap-2">
@@ -214,6 +221,8 @@ export default function SplitSkillDailyReport({
           </button>
         </div>
       </div>
+
+      {/* date n filters */}
       <div className="bg-white rounded-lg shadow w-full p-4">
         <div className="flex items-center justify-between flex-wrap">
           <div className="flex items-center space-x-4">
@@ -243,41 +252,24 @@ export default function SplitSkillDailyReport({
               <div className="h-8 border-l border-gray-300 mx-2"></div>
             </div>
             <div className="relative inline-block w-44">
-              <div className="relative">
-                <select className={`block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none ${
-                    !queueId ? 'text-gray-500' : 'text-gray-900'
-                  }`}
-                  value={queueId || ''}
-                  onChange={(e) => {
-                    setQueueId(e.target.value);
-                    setCurrentPage(1);
-                    setNextPageToken(null);
-                    fetchReports(1, null);
-                  }}
-                >
-                  <option value="all" className="text-gray-500">
-                    Queue ID
-                  </option>
-                  <option value="queue1">Queue 1</option>
-                  <option value="queue2">Queue 2</option>
-                  <option value="queue3">Queue 3</option>
-                  <option value="queue4">Queue 4</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-blue-600">
-                  <svg
-                    className="h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              </div>
+              <select
+                className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all" className="text-gray-500">All Queues</option>
+                {uniqueQueues.map((queue, idx) => (
+                  <option key={idx} value={queue}>{queue}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative inline-block w-44">
+              <select
+                className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all" className="text-gray-500">All Agents</option>
+                {allAgents.map((name, idx) => (
+                  <option key={idx} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button
@@ -292,6 +284,8 @@ export default function SplitSkillDailyReport({
           </button>
         </div>
       </div>
+
+      {/* summary card */}
       <div className="bg-white rounded-lg shadow">
         <div className="flex flex-wrap divide-x divide-gray-200">
           <div className="flex-1 py-3 px-4">
@@ -430,8 +424,10 @@ export default function SplitSkillDailyReport({
           </div>
         </div>
       </div>
+
+      {/* table */}
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
-        <div className="flex flex-col" style={{ height: 'calc(98vh - 320px)' }}>
+        <div className="flex flex-col" style={{ height: 'calc(98vh - 270px)' }}>
           <div className="overflow-auto flex-grow">
             {isLoading ? (
               <div className="text-center py-4">Loading...</div>
