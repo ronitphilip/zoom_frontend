@@ -19,6 +19,8 @@ export default function SplitSkillSummaryDailyReport({
   const [reportData, setReportData] = useState<RecordSummary[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
@@ -51,39 +53,57 @@ export default function SplitSkillSummaryDailyReport({
       };
     });
 
-  const totalPages = Math.ceil(reportData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = reportData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [itemsPerPage]);
 
-  const fetchReports = async () => {
+  const fetchReports = async (page: number = 1, nextPageToken: string | null = null) => {
     try {
       const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
       const header: Headers = { Authorization: `Bearer ${token}` };
       const reqBody = {
         from: startDate,
         to: endDate,
+        count: itemsPerPage,
+        page,
+        nextPageToken: nextPageToken,
       };
       const result = await fetchDailyAgentQueuesAPI(reqBody, header);
-      if (result.success && Array.isArray(result.data)) {
-        setReportData(result.data);
+      console.log(result);
+      
+      if (result.success) {
+        setReportData(result?.data?.reports || []);
+        setNextPageToken(result?.data?.nextPageToken || null);
+        setTotalRecords(result?.data?.totalRecords || 0);
       } else {
         console.error('Invalid API response');
         setReportData([]);
+        setTotalRecords(0);
+        setNextPageToken(undefined);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
+      setTotalRecords(0);
+      setNextPageToken(undefined);
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      fetchReports(prevPage, null);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage * itemsPerPage < totalRecords) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchReports(nextPage, nextPageToken);
     }
   };
 
@@ -110,7 +130,7 @@ export default function SplitSkillSummaryDailyReport({
       avgAcwTime: reportData.reduce((acc, curr) => acc + curr.avgAcwTime, 0),
       avgHandleTime: reportData.reduce((acc, curr) => acc + curr.avgHandleTime, 0),
       digitalInteractions: reportData.reduce((acc, curr) => acc + curr.digitalInteractions, 0),
-      maxHandleTime: reportData.reduce((acc, curr) => acc + curr.maxHandleTime, 0),
+      maxHandleTime: reportData.reduce((acc, curr) => Math.max(acc, curr.maxHandleTime), 0),
       transferCount: reportData.reduce((acc, curr) => acc + curr.transferCount, 0),
       voiceCalls: reportData.reduce((acc, curr) => acc + curr.voiceCalls, 0),
     };
@@ -188,7 +208,7 @@ export default function SplitSkillSummaryDailyReport({
               </div>
             )}
           </div>
-          <button onClick={fetchReports} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={()=>fetchReports()} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -240,7 +260,7 @@ export default function SplitSkillSummaryDailyReport({
             </div>
           </div>
           <button
-            onClick={fetchReports}
+            onClick={()=>fetchReports()}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
             Generate Report
@@ -368,7 +388,7 @@ export default function SplitSkillSummaryDailyReport({
                   {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
                   {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
                 </tr>
-                {currentItems.map((record, index) => (
+                {reportData.map((record, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>}
                     {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
@@ -402,37 +422,38 @@ export default function SplitSkillSummaryDailyReport({
               onChange={(e) => {
                 setItemsPerPage(Number(e.target.value));
                 setCurrentPage(1);
+                setNextPageToken(undefined);
               }}
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
-              <option value={50} > 50</option>
-            <option value={100}>100</option>
-          </select>
-          <span>records per page</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
-            {currentPage}
-          </span>
-          <button
-            className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>records per page</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              disabled={currentPage === 1}
+              onClick={handlePreviousPage}
+            >
+              Previous
+            </button>
+            <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
+              {currentPage}
+            </span>
+            <button
+              className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50"
+              onClick={handleNextPage}
+              disabled={!nextPageToken && currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </div>
-    </div >
   );
 
   function formatTime(seconds: number): string {

@@ -4,19 +4,19 @@ import { Headers } from '@/services/commonAPI';
 import { SkillRecord } from '@/types/agentQueueTypes';
 import { AlignJustify, Download, Filter, RefreshCcw } from 'lucide-react';
 
-interface SplitSkillDailyReportProps {
+interface SkillCallProfile {
   startDate: string;
   endDate: string;
   setStartDate: (date: string) => void;
   setEndDate: (date: string) => void;
 }
 
-export default function SplitSkillDailyReport({
+export default function SkillCallProfile({
   startDate,
   endDate,
   setStartDate,
   setEndDate,
-}: SplitSkillDailyReportProps) {
+}: SkillCallProfile) {
   const [reportData, setReportData] = useState<SkillRecord[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
@@ -170,7 +170,7 @@ export default function SplitSkillDailyReport({
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-xl font-bold text-blue-800">Split/Skill Daily Report</h2>
+        <h2 className="text-xl font-bold text-blue-800">Skill Call Profile Report</h2>
         <div className="flex flex-wrap gap-2">
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <Download size={16} className="mr-2" />Excel
