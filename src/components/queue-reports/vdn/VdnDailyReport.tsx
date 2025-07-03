@@ -1,176 +1,523 @@
-import React, { useState } from 'react';
-import { vdnDailyData } from '@/data/avayaReportData';
-import { ReportFilterCriteria } from '@/types/avayaReportTypes';
-import ReportFilter from '@/components/filters/ReportFilter';
+import React, { useEffect, useState } from 'react';
+import { fetchAgentVDNIntervalAPI } from '@/services/vdnAPI';
+import { Headers } from '@/services/commonAPI';
+import { Download, Filter, RefreshCcw, AlignJustify } from 'lucide-react';
+import { ReportRecord } from '@/types/agentQueueTypes';
 
 interface VdnDailyReportProps {
-  initialFilterCriteria: ReportFilterCriteria;
+  startDate: string;
+  endDate: string;
+  setStartDate: (date: string) => void;
+  setEndDate: (date: string) => void;
 }
 
-export default function VdnDailyReport({ initialFilterCriteria }: VdnDailyReportProps) {
-  const [filterCriteria, setFilterCriteria] = useState<ReportFilterCriteria>(initialFilterCriteria);
-  const [reportData, setReportData] = useState(vdnDailyData);
-  
-  const generateReport = () => {
-    // In a real app, this would fetch data from an API
-    console.log('Generating report with criteria:', filterCriteria);
-    // For demonstration, we're using the static sample data
-    setReportData(vdnDailyData);
+export default function VdnDailyReport({ startDate, endDate, setStartDate, setEndDate }: VdnDailyReportProps) {
+  const [reportData, setReportData] = useState<ReportRecord[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [selectedFlow, setSelectedFlow] = useState<string>('all');
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    date: true,
+    flowName: true,
+    totalOffered: true,
+    totalAnswered: true,
+    abandonedCalls: true,
+    abandonPercentage: true,
+    acdTime: true,
+    acwTime: true,
+    agentRingTime: true,
+    avgAcwTime: true,
+    avgHandleTime: true,
+    digitalInteractions: true,
+    inboundCalls: true,
+    maxHandleTime: true,
+    outboundCalls: true,
+    successPercentage: true,
+    transferCount: true,
+    voiceCalls: true,
+  });
+
+  useEffect(() => {
+    fetchDailyReport(1, null);
+  }, []);
+
+  const fetchDailyReport = async (page: number = 1, pageToken: string | null = null) => {
+    const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    if (!token) {
+      console.error('No authentication token found');
+      alert('Authentication token missing. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        count: itemsPerPage,
+        page,
+        nextPageToken: pageToken,
+        interval: '1440',
+        flowName: selectedFlow !== 'all' ? selectedFlow : undefined
+      };
+      const header: Headers = {
+        Authorization: `Bearer ${token}`,
+      };
+      const result = await fetchAgentVDNIntervalAPI(reqBody, header);
+
+      if (result.success) {
+        setReportData(result.data.reports || []);
+        setNextPageToken(result.data.nextPageToken || null);
+        setTotalRecords(result.data.totalRecords || 0);
+        setCurrentPage(page);
+      } else {
+        console.error('Invalid API response:', result);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      }
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+      fetchDailyReport(prevPage, null);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage * itemsPerPage < totalRecords) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchDailyReport(nextPage, nextPageToken);
+    }
+  };
+
+  const toggleColumn = (column: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [column]: !prev[column],
+    }));
+  };
+
+  const calculateSummary = () => {
+    const summary = {
+      date: 'SUMMARY',
+      flowId: '',
+      flowName: '',
+      totalOffered: reportData.reduce((acc, curr) => acc + (curr.totalOffered || 0), 0),
+      totalAnswered: reportData.reduce((acc, curr) => acc + (curr.totalAnswered || 0), 0),
+      abandonedCalls: reportData.reduce((acc, curr) => acc + (curr.abandonedCalls || 0), 0),
+      abandonPercentage: '',
+      acdTime: reportData.reduce((acc, curr) => acc + (curr.acdTime || 0), 0),
+      acwTime: reportData.reduce((acc, curr) => acc + (curr.acwTime || 0), 0),
+      agentRingTime: reportData.reduce((acc, curr) => acc + (curr.agentRingTime || 0), 0),
+      avgAcwTime: reportData.reduce((acc, curr) => acc + (curr.avgAcwTime || 0), 0),
+      avgHandleTime: reportData.reduce((acc, curr) => acc + (curr.avgHandleTime || 0), 0),
+      digitalInteractions: reportData.reduce((acc, curr) => acc + (curr.digitalInteractions || 0), 0),
+      inboundCalls: reportData.reduce((acc, curr) => acc + (curr.inboundCalls || 0), 0),
+      maxHandleTime: reportData.reduce((acc, curr) => acc + (curr.maxHandleTime || 0), 0),
+      outboundCalls: reportData.reduce((acc, curr) => acc + (curr.outboundCalls || 0), 0),
+      successPercentage: '',
+      transferCount: reportData.reduce((acc, curr) => acc + (curr.transferCount || 0), 0),
+      voiceCalls: reportData.reduce((acc, curr) => acc + (curr.voiceCalls || 0), 0),
+    };
+
+    const formatTime = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return {
+      ...summary,
+      acdTime: formatTime(summary.acdTime),
+      acwTime: formatTime(summary.acwTime),
+      agentRingTime: formatTime(summary.agentRingTime),
+      avgAcwTime: formatTime(Math.round(summary.avgAcwTime)),
+      avgHandleTime: formatTime(Math.round(summary.avgHandleTime)),
+      maxHandleTime: formatTime(summary.maxHandleTime),
+      abandonPercentage: summary.totalOffered ? Math.round((summary.abandonedCalls / summary.totalOffered) * 100) + '%' : '0%',
+      successPercentage: summary.totalOffered ? Math.round((summary.totalAnswered / summary.totalOffered) * 100) + '%' : '0%',
+    };
+  };
+
+  const uniqueQueues = Array.from(new Set(reportData.map(item => item.flowName))).filter(Boolean);
+  const summary = calculateSummary();
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
+
   return (
     <div className="space-y-6">
       {/* Page header with title and actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-xl font-bold text-blue-800">VDN Report (Skill) Daily</h2>
-        
+        <h2 className="text-xl font-bold text-blue-800">VDN Report Daily</h2>
         <div className="flex flex-wrap gap-2">
-          {/* Action buttons with blue styling */}
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel
+            <Download size={16} className="mr-2" />Excel
           </button>
-          
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            CSV
+            <Download size={16} className="mr-2" />CSV
           </button>
-          
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            PDF
+            <Download size={16} className="mr-2" />PDF
           </button>
-          
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnMenu(!showColumnMenu)}
+              className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
+            >
+              <AlignJustify size={16} className="mr-2" />Columns
+            </button>
+            {showColumnMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="p-2 max-h-96 overflow-y-auto">
+                  {Object.entries(visibleColumns).map(([column, isVisible]) => (
+                    <label key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md cursor-pointer">
+                      <input
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        type="checkbox"
+                        checked={isVisible}
+                        onChange={() => toggleColumn(column)}
+                      />
+                      <span className="text-sm text-gray-700 capitalize">
+                        {column.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
+            onClick={() => {
+              setCurrentPage(1);
+              setNextPageToken(null);
+              fetchDailyReport(1, null);
+            }}
+          >
+            <RefreshCcw size={16} className="mr-2" />Refresh
           </button>
         </div>
       </div>
-      
-      {/* Report Filter */}
-      <ReportFilter 
-        filterCriteria={filterCriteria}
-        onFilterChange={setFilterCriteria}
-        onGenerateReport={generateReport}
-        showVdnFilter={true}
-      />
-      
+
+      {/* Date Filter */}
+      <div className="bg-white rounded-lg shadow w-full p-4">
+        <div className="flex items-center justify-between flex-wrap">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">From:</span>
+              <div className="relative">
+                <input
+                  type="date"
+                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">To:</span>
+              <div className="relative">
+                <input
+                  type="date"
+                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="h-8 border-l border-gray-300 mx-2"></div>
+              <div className="flex items-center space-x-1 text-gray-700">
+                <Filter size={18} /><span className="text-sm font-medium">Filters</span>
+              </div>
+              <div className="h-8 border-l border-gray-300 mx-2"></div>
+            </div>
+            <div className="relative inline-block w-44">
+              <select
+                className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedFlow}
+                onChange={(e) => setSelectedFlow(e.target.value)}
+              >
+                <option value="all" className="text-gray-500">All Flows</option>
+                {uniqueQueues.map((queue, idx) => (
+                  <option key={idx} value={queue}>{queue}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setCurrentPage(1);
+              setNextPageToken(null);
+              fetchDailyReport(1, null);
+            }}
+            className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
+          >
+            Generate Report
+          </button>
+        </div>
+      </div>
+
       {/* VDN Information */}
       <div className="bg-white p-4 rounded-lg shadow">
         <h3 className="text-base font-semibold text-blue-800 mb-2">VDN Information</h3>
         <div className="grid grid-cols-3 gap-4">
           <div>
             <span className="text-sm font-medium text-gray-500">VDN Name:</span>
-            <span className="ml-2 text-sm font-semibold">Main Line</span>
-          </div>
-          <div>
-            <span className="text-sm font-medium text-gray-500">VDN ID:</span>
-            <span className="ml-2 text-sm font-semibold">vdn1000</span>
+            <span className="ml-2 text-sm font-semibold">{selectedFlow}</span>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-500">Reporting Period:</span>
-            <span className="ml-2 text-sm font-semibold">{filterCriteria.startDate} to {filterCriteria.endDate}</span>
+            <span className="ml-2 text-sm font-semibold">{startDate} to {endDate}</span>
           </div>
         </div>
       </div>
-      
+
       {/* Report Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Vector Inbound Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Flow In</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg Speed Ans</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg ACD Time</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg ACW Time</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Main ACD Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Backup ACD Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Connect Time</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg Connect Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Aban Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg Aban Time</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">% Aban</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Forced Busy Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">% Busy</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Forced Disc Calls</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Flow Out</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">% Flow Out</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Avg VDN Time</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">1st Skill Pref</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">2nd Skill Pref</th>
-                <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">3rd Skill Pref</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reportData.map((record, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.vectorInboundCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.flowIn}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.calls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgSpeedAns}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgAcdTime}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgAcwTime}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.mainAcdCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.backupAcdCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.connectTime}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgConnectCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abanCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgAbanTime}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.percentAban}%</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.forcedBusyCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.percentBusy}%</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.forcedDiscCalls}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.flowOut}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.percentFlowOut}%</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.avgVdnTime}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.firstSkillPref}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.secondSkillPref}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.thirdSkillPref}</td>
-                </tr>
-              ))}
-              
-              {/* Summary row */}
-              <tr className="bg-blue-50 font-semibold">
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">TOTALS</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">1874</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">195</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">1732</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">0:28</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">3:15</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">0:48</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">1532</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">124</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">32:45:00</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">3</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">142</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">0:32</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">7.5%</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">28</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">1.4%</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">12</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">87</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">4.6%</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">2:10</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">-</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">-</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-blue-800">-</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="flex flex-col" style={{ height: 'calc(98vh - 310px)' }}>
+          <div className="overflow-auto flex-grow">
+            {isLoading ? (
+              <div className="text-center py-4">Loading...</div>
+            ) : reportData.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">No data available</div>
+            ) : (
+              <table className="w-full divide-y divide-gray-200 text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {visibleColumns.date && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>
+                    )}
+                    {visibleColumns.flowName && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Flow Name</th>
+                    )}
+                    {visibleColumns.totalOffered && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>
+                    )}
+                    {visibleColumns.totalAnswered && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>
+                    )}
+                    {visibleColumns.abandonedCalls && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>
+                    )}
+                    {visibleColumns.abandonPercentage && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandon %</th>
+                    )}
+                    {visibleColumns.acdTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACD Time</th>
+                    )}
+                    {visibleColumns.acwTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACW Time</th>
+                    )}
+                    {visibleColumns.agentRingTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent Ring Time</th>
+                    )}
+                    {visibleColumns.avgAcwTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg ACW Time</th>
+                    )}
+                    {visibleColumns.avgHandleTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg Handle Time</th>
+                    )}
+                    {visibleColumns.digitalInteractions && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Digital Interactions</th>
+                    )}
+                    {visibleColumns.inboundCalls && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Inbound Calls</th>
+                    )}
+                    {visibleColumns.maxHandleTime && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Max Handle Time</th>
+                    )}
+                    {visibleColumns.outboundCalls && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Outbound Calls</th>
+                    )}
+                    {visibleColumns.successPercentage && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Success %</th>
+                    )}
+                    {visibleColumns.transferCount && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Transfer Count</th>
+                    )}
+                    {visibleColumns.voiceCalls && (
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Voice Calls</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr className="bg-blue-50 font-semibold">
+                    {visibleColumns.date && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>
+                    )}
+                    {visibleColumns.flowName && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.flowName}</td>
+                    )}
+                    {visibleColumns.totalOffered && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>
+                    )}
+                    {visibleColumns.totalAnswered && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>
+                    )}
+                    {visibleColumns.abandonedCalls && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>
+                    )}
+                    {visibleColumns.abandonPercentage && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonPercentage}</td>
+                    )}
+                    {visibleColumns.acdTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acdTime}</td>
+                    )}
+                    {visibleColumns.acwTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acwTime}</td>
+                    )}
+                    {visibleColumns.agentRingTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentRingTime}</td>
+                    )}
+                    {visibleColumns.avgAcwTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>
+                    )}
+                    {visibleColumns.avgHandleTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgHandleTime}</td>
+                    )}
+                    {visibleColumns.digitalInteractions && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.digitalInteractions}</td>
+                    )}
+                    {visibleColumns.inboundCalls && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.inboundCalls}</td>
+                    )}
+                    {visibleColumns.maxHandleTime && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>
+                    )}
+                    {visibleColumns.outboundCalls && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.outboundCalls}</td>
+                    )}
+                    {visibleColumns.successPercentage && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.successPercentage}</td>
+                    )}
+                    {visibleColumns.transferCount && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>
+                    )}
+                    {visibleColumns.voiceCalls && (
+                      <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>
+                    )}
+                  </tr>
+                  {reportData.map((record, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      {visibleColumns.date && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date || 'N/A'}</td>
+                      )}
+                      {visibleColumns.flowName && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.flowName || 'N/A'}</td>
+                      )}
+                      {visibleColumns.totalOffered && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered || '0'}</td>
+                      )}
+                      {visibleColumns.totalAnswered && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered || '0'}</td>
+                      )}
+                      {visibleColumns.abandonedCalls && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls || '0'}</td>
+                      )}
+                      {visibleColumns.abandonPercentage && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonPercentage || '0%'}</td>
+                      )}
+                      {visibleColumns.acdTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acdTime || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.acwTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acwTime || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.agentRingTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentRingTime || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.avgAcwTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgAcwTime) || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.avgHandleTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgHandleTime) || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.digitalInteractions && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions || '0'}</td>
+                      )}
+                      {visibleColumns.inboundCalls && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.inboundCalls || '0'}</td>
+                      )}
+                      {visibleColumns.maxHandleTime && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.maxHandleTime || '00:00:00'}</td>
+                      )}
+                      {visibleColumns.outboundCalls && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.outboundCalls || '0'}</td>
+                      )}
+                      {visibleColumns.successPercentage && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.successPercentage || '0%'}</td>
+                      )}
+                      {visibleColumns.transferCount && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.transferCount || '0'}</td>
+                      )}
+                      {visibleColumns.voiceCalls && (
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.voiceCalls || '0'}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="flex items-center text-xs text-gray-500">
+              <span>Showing</span>
+              <select
+                className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(parseInt(e.target.value));
+                  setCurrentPage(1);
+                  setNextPageToken(null);
+                  fetchDailyReport(1, null);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>records per page</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
+                {currentPage} of {totalPages}
+              </span>
+              <button
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                onClick={handleNextPage}
+                disabled={currentPage * itemsPerPage >= totalRecords || !nextPageToken}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

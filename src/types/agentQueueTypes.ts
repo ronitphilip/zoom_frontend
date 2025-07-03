@@ -58,3 +58,25 @@ export interface AgentAbandonedReport {
   voiceMail: number;
   transferCount: number;
 }
+
+export interface ReportRecord {
+    date: string;
+    flowId: string;
+    flowName: string;
+    totalOffered: number;
+    totalAnswered: number;
+    abandonedCalls: number;
+    abandonPercentage: string;
+    acdTime: number;
+    acwTime: number;
+    agentRingTime: number;
+    avgAcwTime: number;
+    avgHandleTime: number;
+    digitalInteractions: number;
+    inboundCalls: number;
+    maxHandleTime: number;
+    outboundCalls: number;
+    successPercentage: string;
+    transferCount: number;
+    voiceCalls: number;
+}
