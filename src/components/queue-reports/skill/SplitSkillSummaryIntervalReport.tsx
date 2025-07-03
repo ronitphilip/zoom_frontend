@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { fetchIntervalAgentQueuesAPI } from '@/services/queueAPI';
+import { fetchIntervalAgentQueuesAPI, refreshQueuesAPI } from '@/services/queueAPI';
 import { Headers } from '@/services/commonAPI';
 import { RecordSummary } from '@/types/agentQueueTypes';
+import { AlignJustify, Download, RefreshCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface SplitSkillSummaryIntervalReportProps {
   startDate: string;
@@ -20,10 +23,12 @@ export default function SplitSkillSummaryIntervalReport({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
   const [selectedInterval, setSelectedInterval] = useState<string>('15');
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
+
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
     time: true,
@@ -44,24 +49,38 @@ export default function SplitSkillSummaryIntervalReport({
   });
 
   // Get unique queues for the filter
-  const uniqueQueues = Array.from(new Set(reportData.map(record => record.queueId)))
-    .map(queueId => {
-      const record = reportData.find(r => r.queueId === queueId);
-      return {
-        id: queueId,
-        name: record?.queueName || queueId
-      };
-    });
+  const uniqueQueues = React.useMemo(
+    () =>
+      Array.from(new Set(reportData.map(record => record.queueId))).map(queueId => {
+        const record = reportData.find(r => r.queueId === queueId);
+        return {
+          id: queueId,
+          name: record?.queueName || queueId
+        };
+      }),
+    [reportData]
+  );
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
+  const currentItems = reportData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
-    fetchReports();
-  }, [itemsPerPage]);
+    fetchReports(1, null);
+  }, [itemsPerPage]); 
 
   const fetchReports = async (page: number = 1, nextPageToken: string | null = null) => {
+    setIsLoading(true);
     try {
       const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+      if (!token) {
+        console.error('No authentication token found');
+        alert('Authentication token missing. Please log in again.');
+        return;
+      }
+
       const header: Headers = { Authorization: `Bearer ${token}` };
       const reqBody = {
         from: startDate,
@@ -70,26 +89,73 @@ export default function SplitSkillSummaryIntervalReport({
         count: itemsPerPage,
         page,
         nextPageToken,
-        queueId: selectedQueue !== 'all' && selectedQueue
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined 
       };
       const result = await fetchIntervalAgentQueuesAPI(reqBody, header);
-      console.log(result);
 
       if (result.success && Array.isArray(result.data.reports)) {
-        setReportData(result.data.reports);
+        const reports = result.data.reports;
+        setReportData(reports);
         setTotalRecords(result.data.totalRecords || 0);
-        setNextPageToken(result.data.nextPageToken);
+        setNextPageToken(result.data.nextPageToken || null);
+        setCurrentPage(page); 
+        if (reports.length > itemsPerPage) {
+          console.warn(`Received ${reports.length} records, expected up to ${itemsPerPage}`);
+        }
       } else {
         console.error('Invalid API response');
         setReportData([]);
         setTotalRecords(0);
-        setNextPageToken(undefined);
+        setNextPageToken(null);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
       setTotalRecords(0);
-      setNextPageToken(undefined);
+      setNextPageToken(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+    setIsLoading(true); 
+    try {
+      const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+      if (!token) {
+        console.error('No authentication token found');
+        alert('Authentication token missing. Please log in again.');
+        return;
+      }
+
+      const header: Headers = { Authorization: `Bearer ${token}` };
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        interval: selectedInterval,
+        count: itemsPerPage,
+        page,
+        nextPageToken: pageToken,
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined
+      };
+
+      const result = await refreshQueuesAPI(reqBody, header);
+
+      if (result.success) {
+        fetchReports(1, null);
+      } else {
+        console.error('Invalid API response:', result);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      }
+    } catch (err) {
+      console.error('Error refreshing reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -174,39 +240,61 @@ export default function SplitSkillSummaryIntervalReport({
 
   const summary = calculateSummary();
 
+  const downloadExcel = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+    const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, 'skill_interval_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+  };
+
+  const downloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const csv = Papa.unparse(reportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'skill_interval_report.csv');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Page header with title and actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Split/Skill Summary Interval Report</h2>
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel
+          <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+            <Download size={16} className="mr-2" />Excel
+          </button>
+          <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+            <Download size={16} className="mr-2" />CSV
           </button>
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            CSV
-          </button>
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            PDF
+            <Download size={16} className="mr-2" />PDF
           </button>
           <div className="relative">
             <button
               onClick={() => setShowColumnMenu(!showColumnMenu)}
               className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              Columns
+              <AlignJustify size={16} className="mr-2" />Columns
             </button>
             {showColumnMenu && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
@@ -229,13 +317,10 @@ export default function SplitSkillSummaryIntervalReport({
             )}
           </div>
           <button
-            onClick={() => fetchReports()}
+            onClick={() => refreshReports(1, null)}
             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
+            <RefreshCcw size={16} className="mr-2" />Refresh
           </button>
         </div>
       </div>
@@ -267,7 +352,11 @@ export default function SplitSkillSummaryIntervalReport({
               <select
                 className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-48"
                 value={selectedQueue}
-                onChange={(e) => setSelectedQueue(e.target.value)}
+                onChange={(e) => {
+                  setSelectedQueue(e.target.value);
+                  setCurrentPage(1);
+                  setNextPageToken(null);
+                }}
               >
                 <option value="all">All Queues</option>
                 {uniqueQueues.map(queue => (
@@ -282,7 +371,11 @@ export default function SplitSkillSummaryIntervalReport({
               <select
                 className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-32"
                 value={selectedInterval}
-                onChange={(e) => setSelectedInterval(e.target.value)}
+                onChange={(e) => {
+                  setSelectedInterval(e.target.value);
+                  setCurrentPage(1);
+                  setNextPageToken(null);
+                }}
               >
                 <option value="15">15 Minutes</option>
                 <option value="30">30 Minutes</option>
@@ -291,7 +384,11 @@ export default function SplitSkillSummaryIntervalReport({
             </div>
           </div>
           <button
-            onClick={() => fetchReports()}
+            onClick={() => {
+              setCurrentPage(1);
+              setNextPageToken(null);
+              fetchReports(1, null);
+            }}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
             Generate Report
@@ -389,68 +486,74 @@ export default function SplitSkillSummaryIntervalReport({
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
         <div className="flex flex-col" style={{ height: "calc(98vh - 270px)" }}>
           <div className="overflow-auto flex-grow">
-            <table className="w-full divide-y divide-gray-200 text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  {visibleColumns.date && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>}
-                  {visibleColumns.time && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Time</th>}
-                  {visibleColumns.queueId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Queue ID</th>}
-                  {visibleColumns.queueName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Queue Name</th>}
-                  {visibleColumns.totalOffered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>}
-                  {visibleColumns.totalAnswered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>}
-                  {visibleColumns.abandonedCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>}
-                  {visibleColumns.voiceCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Voice Calls</th>}
-                  {visibleColumns.digitalInteractions && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Digital Interactions</th>}
-                  {visibleColumns.transferCount && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Transfer Count</th>}
-                  {visibleColumns.agentRingTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent Ring Time</th>}
-                  {visibleColumns.acdTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACD Time</th>}
-                  {visibleColumns.acwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACW Time</th>}
-                  {visibleColumns.avgHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg Handle Time</th>}
-                  {visibleColumns.avgAcwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg ACW Time</th>}
-                  {visibleColumns.maxHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Max Handle Time</th>}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                <tr className="bg-blue-50 font-semibold">
-                  {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>}
-                  {visibleColumns.time && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.time}</td>}
-                  {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueId}</td>}
-                  {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueName}</td>}
-                  {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>}
-                  {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>}
-                  {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>}
-                  {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
-                  {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.digitalInteractions}</td>}
-                  {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
-                  {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentRingTime}</td>}
-                  {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acdTime}</td>}
-                  {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acwTime}</td>}
-                  {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgHandleTime}</td>}
-                  {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>}
-                  {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>}
-                </tr>
-                {reportData.map((record, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDate(record.date)}</td>}
-                    {visibleColumns.time && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.date)}</td>}
-                    {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
-                    {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueName}</td>}
-                    {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered}</td>}
-                    {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered}</td>}
-                    {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls}</td>}
-                    {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.voiceCalls}</td>}
-                    {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions}</td>}
-                    {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.transferCount}</td>}
-                    {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.agentRingTime)}</td>}
-                    {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acdTime)}</td>}
-                    {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acwTime)}</td>}
-                    {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.avgHandleTime)}</td>}
-                    {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.avgAcwTime)}</td>}
-                    {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.maxHandleTime)}</td>}
+            {isLoading ? ( // Show loading message
+              <div className="text-center py-4 text-gray-500">Loading...</div>
+            ) : reportData.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">No data available</div>
+            ) : (
+              <table className="w-full divide-y divide-gray-200 text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {visibleColumns.date && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>}
+                    {visibleColumns.time && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Time</th>}
+                    {visibleColumns.queueId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Queue ID</th>}
+                    {visibleColumns.queueName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Queue Name</th>}
+                    {visibleColumns.totalOffered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>}
+                    {visibleColumns.totalAnswered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>}
+                    {visibleColumns.abandonedCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>}
+                    {visibleColumns.voiceCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Voice Calls</th>}
+                    {visibleColumns.digitalInteractions && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Digital Interactions</th>}
+                    {visibleColumns.transferCount && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Transfer Count</th>}
+                    {visibleColumns.agentRingTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent Ring Time</th>}
+                    {visibleColumns.acdTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACD Time</th>}
+                    {visibleColumns.acwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACW Time</th>}
+                    {visibleColumns.avgHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg Handle Time</th>}
+                    {visibleColumns.avgAcwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg ACW Time</th>}
+                    {visibleColumns.maxHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Max Handle Time</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr className="bg-blue-50 font-semibold">
+                    {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>}
+                    {visibleColumns.time && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.time}</td>}
+                    {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueId}</td>}
+                    {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueName}</td>}
+                    {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>}
+                    {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>}
+                    {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>}
+                    {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
+                    {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.digitalInteractions}</td>}
+                    {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
+                    {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentRingTime}</td>}
+                    {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acdTime}</td>}
+                    {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acwTime}</td>}
+                    {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgHandleTime}</td>}
+                    {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>}
+                    {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>}
+                  </tr>
+                  {currentItems.map((record, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDate(record.date)}</td>}
+                      {visibleColumns.time && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.date)}</td>}
+                      {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
+                      {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueName}</td>}
+                      {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered}</td>}
+                      {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered}</td>}
+                      {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls}</td>}
+                      {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.voiceCalls}</td>}
+                      {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions}</td>}
+                      {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.transferCount}</td>}
+                      {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.agentRingTime)}</td>}
+                      {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acdTime)}</td>}
+                      {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acwTime)}</td>}
+                      {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.avgHandleTime)}</td>}
+                      {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.avgAcwTime)}</td>}
+                      {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.maxHandleTime)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
           <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <div className="flex items-center text-xs text-gray-500 space-x-4">
@@ -462,7 +565,8 @@ export default function SplitSkillSummaryIntervalReport({
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
-                    setNextPageToken(undefined);
+                    setNextPageToken(null);
+                    fetchReports(1, null); // Trigger fetch on itemsPerPage change
                   }}
                 >
                   <option value={10}>10</option>
@@ -485,7 +589,7 @@ export default function SplitSkillSummaryIntervalReport({
                 Page {currentPage} of {totalPages}
               </span>
               <button
-                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50"
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
                 disabled={!nextPageToken && currentPage === totalPages}
               >

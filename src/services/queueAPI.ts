@@ -20,3 +20,7 @@ export const fetchAbandonedCallsAPI = async (reqBody: any, header: Headers): Pro
 export const getAgentAbandonedReportAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('POST', `${server_url}/queues/abandoned-report`, reqBody, header);
 }
+
+export const refreshQueuesAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('POST', `${server_url}/queues/refresh`, reqBody, header);
+}

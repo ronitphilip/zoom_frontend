@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getAgentAbandonedReportAPI } from '@/services/queueAPI';
+import { getAgentAbandonedReportAPI, refreshQueuesAPI } from '@/services/queueAPI';
 import { Headers } from '@/services/commonAPI';
 import { AlignJustify, Download, Filter, RefreshCcw } from 'lucide-react';
 import { AgentAbandonedReport } from '@/types/agentQueueTypes';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface AbandonedCallsReportProps {
   startDate: string;
@@ -103,6 +105,46 @@ export default function AbandonedCallsReport({
     }
   };
 
+  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+      setIsLoading(true); 
+      try {
+        const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+        if (!token) {
+          console.error('No authentication token found');
+          alert('Authentication token missing. Please log in again.');
+          return;
+        }
+  
+        const header: Headers = { Authorization: `Bearer ${token}` };
+        const reqBody = {
+          from: startDate,
+          to: endDate,
+          count: itemsPerPage,
+          page,
+          nextPageToken: pageToken,
+          queueId: selectedQueue !== 'all' ? selectedQueue : undefined
+        };
+  
+        const result = await refreshQueuesAPI(reqBody, header);
+  
+        if (result.success) {
+          fetchReports(1, null);
+        } else {
+          console.error('Invalid API response:', result);
+          setReportData([]);
+          setNextPageToken(null);
+          setTotalRecords(0);
+        }
+      } catch (err) {
+        console.error('Error refreshing reports:', err);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
@@ -126,6 +168,40 @@ export default function AbandonedCallsReport({
     }));
   };
 
+  const downloadExcel = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+    const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, 'call_profile_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+  };
+
+  const downloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const csv = Papa.unparse(reportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'call_profile_report.csv');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
   const currentItems = reportData;
 
@@ -135,10 +211,10 @@ export default function AbandonedCallsReport({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Skill Call Profile</h2>
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <Download size={16} className="mr-2" />Excel
           </button>
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <Download size={16} className="mr-2" />CSV
           </button>
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
@@ -170,7 +246,7 @@ export default function AbandonedCallsReport({
             onClick={() => {
               setCurrentPage(1);
               setNextPageToken(null);
-              fetchReports(1, null);
+              refreshReports(1, null);
             }}
           >
             <RefreshCcw size={16} className='mr-2' />Refresh

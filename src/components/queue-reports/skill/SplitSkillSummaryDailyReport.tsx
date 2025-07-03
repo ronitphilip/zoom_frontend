@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { fetchDailyAgentQueuesAPI } from '@/services/queueAPI';
+import { fetchDailyAgentQueuesAPI, refreshQueuesAPI } from '@/services/queueAPI';
 import { Headers } from '@/services/commonAPI';
 import { RecordSummary } from '@/types/agentQueueTypes';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
+import { AlignJustify, Download, RefreshCcw } from 'lucide-react';
 
 interface SplitSkillSummaryDailyReportProps {
   startDate: string;
@@ -20,10 +23,11 @@ export default function SplitSkillSummaryDailyReport({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
     queueId: true,
@@ -53,14 +57,26 @@ export default function SplitSkillSummaryDailyReport({
     });
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
+  const currentItems = reportData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   useEffect(() => {
     fetchReports();
   }, [itemsPerPage]);
+console.log(itemsPerPage);
 
   const fetchReports = async (page: number = 1, nextPageToken: string | null = null) => {
+    setIsLoading(true);
     try {
       const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+      if (!token) {
+        console.error('No authentication token found');
+        alert('Authentication token missing. Please log in again.');
+        return;
+      }
+
       const header: Headers = { Authorization: `Bearer ${token}` };
       const reqBody = {
         from: startDate,
@@ -68,25 +84,106 @@ export default function SplitSkillSummaryDailyReport({
         count: itemsPerPage,
         page,
         nextPageToken,
-        queueId: selectedQueue !== 'all' && selectedQueue
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined
       };
       const result = await fetchDailyAgentQueuesAPI(reqBody, header);
       if (result.success) {
-        setReportData(result?.data?.reports || []);
+        const reports = result?.data?.reports || [];
+        setReportData(reports);
         setNextPageToken(result?.data?.nextPageToken || null);
         setTotalRecords(result?.data?.totalRecords || 0);
+        setCurrentPage(page); 
+        if (reports.length > itemsPerPage) {
+          console.warn(`Received ${reports.length} records, expected up to ${itemsPerPage}`);
+        }
       } else {
         console.error('Invalid API response');
         setReportData([]);
         setTotalRecords(0);
-        setNextPageToken(undefined);
+        setNextPageToken(null);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
       setTotalRecords(0);
-      setNextPageToken(undefined);
+      setNextPageToken(null);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+    setIsLoading(true);
+    try {
+      const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+      if (!token) {
+        console.error('No authentication token found');
+        alert('Authentication token missing. Please log in again.');
+        return;
+      }
+
+      const header: Headers = { Authorization: `Bearer ${token}` };
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        count: itemsPerPage,
+        page,
+        nextPageToken: pageToken,
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined
+      };
+
+      const result = await refreshQueuesAPI(reqBody, header);
+
+      if (result.success) {
+        fetchReports(1, null);
+      } else {
+        console.error('Invalid API response:', result);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      }
+    } catch (err) {
+      console.error('Error refreshing reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadExcel = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+    const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, 'skill_summary_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+  };
+
+  const downloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const csv = Papa.unparse(reportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'skill_summary_report.csv');
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handlePreviousPage = () => {
@@ -131,13 +228,6 @@ export default function SplitSkillSummaryDailyReport({
       voiceCalls: reportData.reduce((acc, curr) => acc + curr.voiceCalls, 0),
     };
 
-    const formatTime = (seconds: number) => {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
     return {
       ...summary,
       acdTime: formatTime(summary.acdTime),
@@ -153,37 +243,24 @@ export default function SplitSkillSummaryDailyReport({
 
   return (
     <div className="space-y-6">
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Split/Skill Summary Daily Report</h2>
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel
+          <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+            <Download size={16} className="mr-2" />Excel
+          </button>
+          <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+            <Download size={16} className="mr-2" />CSV
           </button>
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            CSV
-          </button>
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            PDF
+            <Download size={16} className="mr-2" />PDF
           </button>
           <div className="relative">
             <button
               onClick={() => setShowColumnMenu(!showColumnMenu)}
               className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              Columns
+              <AlignJustify size={16} className="mr-2" />Columns
             </button>
             {showColumnMenu && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
@@ -205,11 +282,11 @@ export default function SplitSkillSummaryDailyReport({
               </div>
             )}
           </div>
-          <button onClick={() => fetchReports()} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
+          <button
+            onClick={() => refreshReports(1, null)}
+            className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
+          >
+            <RefreshCcw size={16} className="mr-2" />Refresh
           </button>
         </div>
       </div>
@@ -245,7 +322,11 @@ export default function SplitSkillSummaryDailyReport({
                 <select
                   className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-48"
                   value={selectedQueue}
-                  onChange={(e) => setSelectedQueue(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedQueue(e.target.value);
+                    setCurrentPage(1); // Reset to first page on queue change
+                    setNextPageToken(null);
+                  }}
                 >
                   <option value="all">All Queues</option>
                   {uniqueQueues.map(queue => (
@@ -258,7 +339,11 @@ export default function SplitSkillSummaryDailyReport({
             </div>
           </div>
           <button
-            onClick={() => fetchReports()}
+            onClick={() => {
+              setCurrentPage(1);
+              setNextPageToken(null);
+              fetchReports(1, null);
+            }}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
             Generate Report
@@ -344,108 +429,115 @@ export default function SplitSkillSummaryDailyReport({
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
-        <div className="flex flex-col" style={{ height: "calc(98vh - 320px)" }}>
-          <div className="overflow-auto flex-grow">
-            <table className="w-full divide-y divide-gray-200 text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  {visibleColumns.date && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>}
-                  {visibleColumns.queueId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Queue ID</th>}
-                  {visibleColumns.queueName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Queue Name</th>}
-                  {visibleColumns.totalOffered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>}
-                  {visibleColumns.totalAnswered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>}
-                  {visibleColumns.abandonedCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>}
-                  {visibleColumns.acdTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACD Time</th>}
-                  {visibleColumns.acwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACW Time</th>}
-                  {visibleColumns.agentRingTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent Ring Time</th>}
-                  {visibleColumns.avgAcwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg ACW Time</th>}
-                  {visibleColumns.avgHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg Handle Time</th>}
-                  {visibleColumns.digitalInteractions && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Digital Interactions</th>}
-                  {visibleColumns.maxHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Max Handle Time</th>}
-                  {visibleColumns.transferCount && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Transfer Count</th>}
-                  {visibleColumns.voiceCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Voice Calls</th>}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                <tr className="bg-blue-50 font-semibold">
-                  {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>}
-                  {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueId}</td>}
-                  {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueName}</td>}
-                  {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>}
-                  {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>}
-                  {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>}
-                  {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acdTime}</td>}
-                  {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acwTime}</td>}
-                  {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentRingTime}</td>}
-                  {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>}
-                  {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgHandleTime}</td>}
-                  {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.digitalInteractions}</td>}
-                  {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>}
-                  {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
-                  {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
-                </tr>
-                {reportData.map((record, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>}
-                    {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
-                    {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueName}</td>}
-                    {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered}</td>}
-                    {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered}</td>}
-                    {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls}</td>}
-                    {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acdTime)}</td>}
-                    {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acwTime)}</td>}
-                    {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.agentRingTime)}</td>}
-                    {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.avgAcwTime)}</td>}
-                    {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.avgHandleTime)}</td>}
-                    {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions}</td>}
-                    {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.maxHandleTime)}</td>}
-                    {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.transferCount}</td>}
-                    {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.voiceCalls}</td>}
+        <div className="flex flex-col" style={{ height: "calc(98vh - 270px)" }}>
+          <div className="overflow-x-auto flex-grow">
+            {isLoading ? (
+              <div className="text-center py-4 text-gray-500">Loading...</div>
+            ) : reportData.length === 0 ? (
+              <div className="text-center py-4 text-gray-500">No data available</div>
+            ) : (
+              <table className="w-full divide-y divide-gray-200 text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {visibleColumns.date && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Date</th>}
+                    {visibleColumns.queueId && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Queue ID</th>}
+                    {visibleColumns.queueName && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[120px] sticky top-0 bg-gray-50">Queue Name</th>}
+                    {visibleColumns.totalOffered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Offered</th>}
+                    {visibleColumns.totalAnswered && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Total Answered</th>}
+                    {visibleColumns.abandonedCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Abandoned Calls</th>}
+                    {visibleColumns.acdTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACD Time</th>}
+                    {visibleColumns.acwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">ACW Time</th>}
+                    {visibleColumns.agentRingTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Agent Ring Time</th>}
+                    {visibleColumns.avgAcwTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg ACW Time</th>}
+                    {visibleColumns.avgHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Avg Handle Time</th>}
+                    {visibleColumns.digitalInteractions && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Digital Interactions</th>}
+                    {visibleColumns.maxHandleTime && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Max Handle Time</th>}
+                    {visibleColumns.transferCount && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Transfer Count</th>}
+                    {visibleColumns.voiceCalls && <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px] sticky top-0 bg-gray-50">Voice Calls</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr className="bg-blue-50 font-semibold">
+                    {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.date}</td>}
+                    {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueId}</td>}
+                    {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.queueName}</td>}
+                    {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalOffered}</td>}
+                    {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.totalAnswered}</td>}
+                    {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.abandonedCalls}</td>}
+                    {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acdTime}</td>}
+                    {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.acwTime}</td>}
+                    {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.agentRingTime}</td>}
+                    {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>}
+                    {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgHandleTime}</td>}
+                    {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.digitalInteractions}</td>}
+                    {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>}
+                    {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
+                    {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
+                  </tr>
+                  {currentItems.map((record, index) => ( // Use currentItems instead of reportData
+                    <tr key={index} className="hover:bg-gray-50">
+                      {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>}
+                      {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
+                      {visibleColumns.queueName && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueName}</td>}
+                      {visibleColumns.totalOffered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalOffered}</td>}
+                      {visibleColumns.totalAnswered && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.totalAnswered}</td>}
+                      {visibleColumns.abandonedCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonedCalls}</td>}
+                      {visibleColumns.acdTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acdTime)}</td>}
+                      {visibleColumns.acwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acwTime)}</td>}
+                      {visibleColumns.agentRingTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.agentRingTime)}</td>}
+                      {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.avgAcwTime)}</td>}
+                      {visibleColumns.avgHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.avgHandleTime)}</td>}
+                      {visibleColumns.digitalInteractions && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions}</td>}
+                      {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.maxHandleTime)}</td>}
+                      {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.transferCount}</td>}
+                      {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.voiceCalls}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </div>
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-          <div className="flex items-center text-xs text-gray-500 space-x-4">
-            <div className="flex items-center">
-              <span>Showing</span>
-              <select
-                className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                  setNextPageToken(undefined);
-                }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span>of {totalRecords}</span>
+          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="flex items-center text-xs text-gray-500 space-x-4">
+              <div className="flex items-center">
+                <span>Showing</span>
+                <select
+                  className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                    setNextPageToken(null);
+                    fetchReports(1, null); // Trigger fetch on itemsPerPage change
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span>of {totalRecords}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              disabled={currentPage === 1}
-              onClick={handlePreviousPage}
-            >
-              Previous
-            </button>
-            <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50"
-              onClick={handleNextPage}
-              disabled={!nextPageToken && currentPage === totalPages}
-            >
-              Next
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                disabled={currentPage === 1}
+                onClick={handlePreviousPage}
+              >
+                Previous
+              </button>
+              <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                onClick={handleNextPage}
+                disabled={!nextPageToken && currentPage === totalPages}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>

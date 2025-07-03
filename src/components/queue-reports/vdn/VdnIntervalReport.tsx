@@ -3,6 +3,8 @@ import { fetchAgentVDNIntervalAPI } from '@/services/vdnAPI';
 import { Headers } from '@/services/commonAPI';
 import { Download, Filter, RefreshCcw, AlignJustify } from 'lucide-react';
 import { ReportRecord } from '@/types/agentQueueTypes';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface VdnIntervalReportProps {
     startDate: string;
@@ -93,6 +95,40 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
         }
     };
 
+    const downloadExcel = () => {
+        if (!reportData || reportData.length === 0) {
+          console.error('No data available for export');
+          return;
+        }
+    
+        const worksheet = XLSX.utils.json_to_sheet(reportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    
+        const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
+          wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+        }));
+        worksheet['!cols'] = colWidths;
+    
+        XLSX.writeFile(workbook, 'vdn_interval_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+      };
+    
+      const downloadCSV = () => {
+        if (!reportData || reportData.length === 0) {
+          console.error('No data available for export');
+          return;
+        }
+    
+        const csv = Papa.unparse(reportData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'vdn_interval_report.csv');
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
     const handlePreviousPage = () => {
         if (currentPage > 1) {
             const prevPage = currentPage - 1;
@@ -169,10 +205,10 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <h2 className="text-xl font-bold text-blue-800">VDN Report Interval</h2>
                 <div className="flex flex-wrap gap-2">
-                    <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+                    <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
                         <Download size={16} className="mr-2" />Excel
                     </button>
-                    <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+                    <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
                         <Download size={16} className="mr-2" />CSV
                     </button>
                     <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
@@ -295,11 +331,7 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <span className="text-sm font-medium text-gray-500">VDN Name:</span>
-                        <span className="ml-2 text-sm font-semibold">Main Line</span>
-                    </div>
-                    <div>
-                        <span className="text-sm font-medium text-gray-500">VDN ID:</span>
-                        <span className="ml-2 text-sm font-semibold">vdn1000</span>
+                        <span className="ml-2 text-sm font-semibold">{selectedFlow}</span>
                     </div>
                     <div>
                         <span className="text-sm font-medium text-gray-500">Reporting Period:</span>

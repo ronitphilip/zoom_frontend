@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { fetchAgentQueuesAPI } from '@/services/queueAPI';
+import { fetchAgentQueuesAPI, refreshQueuesAPI } from '@/services/queueAPI';
 import { Headers } from '@/services/commonAPI';
 import { SkillRecord } from '@/types/agentQueueTypes';
 import { AlignJustify, Download, Filter, RefreshCcw } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 interface SplitSkillDailyReportProps {
   startDate: string;
@@ -75,8 +77,7 @@ export default function SplitSkillDailyReport({
       };
 
       const result = await fetchAgentQueuesAPI(reqBody, header);
-      console.log(result);
-      
+
       if (result.success) {
         setReportData(result.data.reports || []);
         setAllAgents(result.data.agents || []);
@@ -88,17 +89,93 @@ export default function SplitSkillDailyReport({
         setReportData([]);
         setNextPageToken(null);
         setTotalRecords(0);
-        alert('Invalid API response. Please try again.');
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
       setNextPageToken(null);
       setTotalRecords(0);
-      alert('Failed to fetch reports. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+    const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    if (!token) {
+      console.error('No authentication token found');
+      alert('Authentication token missing. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const header: Headers = { Authorization: `Bearer ${token}` };
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        count: itemsPerPage,
+        page,
+        nextPageToken: pageToken,
+      };
+
+      const result = await refreshQueuesAPI(reqBody, header);
+
+      if (result.success) {
+        setReportData(result.data.reports || []);
+        setAllAgents(result.data.agents || []);
+        setNextPageToken(result.data.nextPageToken || null);
+        setTotalRecords(result.data.totalRecords || 0);
+        setCurrentPage(page);
+      } else {
+        console.error('Invalid API response:', result);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      }
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadExcel = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(reportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+    const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, 'skill_daily_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+  };
+
+  const downloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const csv = Papa.unparse(reportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'skill_daily_report.csv');
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handlePreviousPage = () => {
@@ -179,10 +256,10 @@ export default function SplitSkillDailyReport({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Split/Skill Daily Report</h2>
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <Download size={16} className="mr-2" />Excel
           </button>
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+          <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
             <Download size={16} className="mr-2" />CSV
           </button>
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
@@ -214,10 +291,10 @@ export default function SplitSkillDailyReport({
             onClick={() => {
               setCurrentPage(1);
               setNextPageToken(null);
-              fetchReports(1, null);
+              refreshReports(1, null);
             }}
           >
-            <RefreshCcw size={16} className='mr-2'/>Refresh
+            <RefreshCcw size={16} className='mr-2' />Refresh
           </button>
         </div>
       </div>
@@ -408,12 +485,12 @@ export default function SplitSkillDailyReport({
                           {queueId === 'queue1'
                             ? 'Queue 1'
                             : queueId === 'queue2'
-                            ? 'Queue 2'
-                            : queueId === 'queue3'
-                            ? 'Queue 3'
-                            : queueId === 'queue4'
-                            ? 'Queue 4'
-                            : queueId}
+                              ? 'Queue 2'
+                              : queueId === 'queue3'
+                                ? 'Queue 3'
+                                : queueId === 'queue4'
+                                  ? 'Queue 4'
+                                  : queueId}
                         </span>
                       </div>
                     )}
@@ -708,10 +785,10 @@ export default function SplitSkillDailyReport({
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
                           {record.start_time
                             ? new Date(record.start_time).toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                              })
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                            })
                             : 'N/A'}
                         </td>
                       )}
@@ -719,11 +796,11 @@ export default function SplitSkillDailyReport({
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
                           {record.start_time
                             ? new Date(record.start_time).toLocaleTimeString('en-GB', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: false,
-                              })
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                              hour12: false,
+                            })
                             : 'N/A'}
                         </td>
                       )}

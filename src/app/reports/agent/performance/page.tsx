@@ -104,7 +104,6 @@ const Page = () => {
                 from: startDate,
                 to: endDate,
             };
-            console.log('Refresh request body:', reqBody);
 
             const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
             const result = await refreshAgentPerformanceAPI(reqBody, headers);

@@ -1,6 +1,9 @@
 import { Headers } from '@/services/commonAPI';
 import { fetchAbandonedCallsAPI } from '@/services/queueAPI';
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
+import { Download, RefreshCcw } from 'lucide-react';
 
 interface AbandonedCall {
   engagementId: string;
@@ -58,9 +61,43 @@ export default function AbandonedCallsReport({
     }
   };
 
+  const downloadExcel = () => {
+    if (!calls || calls.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(calls);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+
+    const colWidths = Object.keys(calls[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...calls.map((row: any) => String(row[key]).length))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, 'abandoned_call_report.xlsx', { bookType: 'xlsx', type: 'binary' });
+  };
+
+  const downloadCSV = () => {
+    if (!calls || calls.length === 0) {
+      console.error('No data available for export');
+      return;
+    }
+
+    const csv = Papa.unparse(calls);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'abandoned_call_report.csv');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Calculate summary metrics
   const totalAbandoned = calls.length;
-  const avgWaitTime = calls.length > 0 
+  const avgWaitTime = calls.length > 0
     ? Math.round(calls.reduce((sum, call) => sum + call.waitingDuration, 0) / calls.length)
     : 0;
   const formatDuration = (seconds: number) => {
@@ -80,41 +117,29 @@ export default function AbandonedCallsReport({
       {/* Page header with title and actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-xl font-bold text-blue-800">Abandoned Calls</h2>
-        
+
         <div className="flex flex-wrap gap-2">
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel
+          <button onClick={downloadExcel} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+             <Download size={16} className="mr-2" />Excel
           </button>
-          
-          <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            CSV
+
+          <button onClick={downloadCSV} className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
+            <Download size={16} className="mr-2" />CSV
           </button>
-          
+
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            PDF
+            <Download size={16} className="mr-2" />PDF
           </button>
-          
-          <button 
+
+          <button
             onClick={fetchReports}
             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh
+            <RefreshCcw size={16} className='mr-2' />Refresh
           </button>
         </div>
       </div>
-      
+
       {/* Date and filters card */}
       <div className="bg-white rounded-lg shadow w-full p-4">
         <div className="flex items-center justify-between flex-wrap">
@@ -142,7 +167,7 @@ export default function AbandonedCallsReport({
                 />
               </div>
             </div>
-            
+
             {/* Filter Icon */}
             <div className="flex items-center">
               <div className="h-8 border-l border-gray-300 mx-2"></div>
@@ -154,11 +179,11 @@ export default function AbandonedCallsReport({
               </div>
               <div className="h-8 border-l border-gray-300 mx-2"></div>
             </div>
-            
+
             {/* Extension Type Filter */}
             <div className="relative inline-block w-44">
               <div className="relative">
-                <select 
+                <select
                   className={`block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none ${!extensionType ? 'text-gray-500' : 'text-gray-900'}`}
                   value={extensionType || ""}
                   onChange={(e) => setExtensionType(e.target.value)}
@@ -178,11 +203,11 @@ export default function AbandonedCallsReport({
                 </div>
               </div>
             </div>
-            
+
             {/* Specific Extension Filter */}
             <div className="relative inline-block w-44">
               <div className="relative">
-                <select 
+                <select
                   className={`block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none ${!specificExtension ? 'text-gray-500' : 'text-gray-900'}`}
                   value={specificExtension || ""}
                   onChange={(e) => setSpecificExtension(e.target.value)}
@@ -212,9 +237,9 @@ export default function AbandonedCallsReport({
               </div>
             </div>
           </div>
-          
+
           {/* Generate Report Button */}
-          <button 
+          <button
             onClick={fetchReports}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
@@ -222,7 +247,7 @@ export default function AbandonedCallsReport({
           </button>
         </div>
       </div>
-      
+
       {/* Compact Summary Section */}
       <div className="bg-white rounded-lg shadow">
         <div className="flex flex-wrap divide-x divide-gray-200">
@@ -239,7 +264,7 @@ export default function AbandonedCallsReport({
               </div>
             </div>
           </div>
-          
+
           <div className="flex-1 py-3 px-4">
             <div className="flex items-center">
               <div className="p-2 rounded-md bg-orange-100 mr-3">
@@ -253,7 +278,7 @@ export default function AbandonedCallsReport({
               </div>
             </div>
           </div>
-          
+
           <div className="flex-1 py-3 px-4">
             <div className="flex items-center">
               <div className="p-2 rounded-md bg-red-100 mr-3">
@@ -267,7 +292,7 @@ export default function AbandonedCallsReport({
               </div>
             </div>
           </div>
-          
+
           {/* Filter Criteria Summary */}
           <div className="flex-1 py-2 px-4 bg-indigo-50">
             <div className="flex items-center">
@@ -289,31 +314,31 @@ export default function AbandonedCallsReport({
                         </span>
                       </div>
                     )}
-                    
+
                     {extensionType !== 'all' && (
                       <div className="flex items-center">
                         <span className="text-indigo-600">Type:</span>
                         <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                          {extensionType === 'user' ? 'User' : 
-                           extensionType === 'callQueue' ? 'Call Queue' : 
-                           extensionType === 'autoReceptionist' ? 'Auto Receptionist' : 
-                           extensionType === 'commonArea' ? 'Common Area' : 
-                           extensionType === 'zoomRoom' ? 'Zoom Room' : 
-                           extensionType === 'ciscoRoom' ? 'Cisco/Polycom Room' : extensionType}
+                          {extensionType === 'user' ? 'User' :
+                            extensionType === 'callQueue' ? 'Call Queue' :
+                              extensionType === 'autoReceptionist' ? 'Auto Receptionist' :
+                                extensionType === 'commonArea' ? 'Common Area' :
+                                  extensionType === 'zoomRoom' ? 'Zoom Room' :
+                                    extensionType === 'ciscoRoom' ? 'Cisco/Polycom Room' : extensionType}
                         </span>
                       </div>
                     )}
-                    
+
                     {specificExtension !== 'all' && (
                       <div className="flex items-center">
                         <span className="text-indigo-600">Ext:</span>
                         <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
                           {specificExtension === 'user1' ? 'John Smith' :
-                           specificExtension === 'user2' ? 'Jane Doe' :
-                           specificExtension === 'user3' ? 'Michael Brown' :
-                           specificExtension === 'queue1' ? 'Sales Queue' :
-                           specificExtension === 'queue2' ? 'Support Queue' :
-                           specificExtension === 'queue3' ? 'Billing Queue' : specificExtension}
+                            specificExtension === 'user2' ? 'Jane Doe' :
+                              specificExtension === 'user3' ? 'Michael Brown' :
+                                specificExtension === 'queue1' ? 'Sales Queue' :
+                                  specificExtension === 'queue2' ? 'Support Queue' :
+                                    specificExtension === 'queue3' ? 'Billing Queue' : specificExtension}
                         </span>
                       </div>
                     )}
@@ -324,7 +349,7 @@ export default function AbandonedCallsReport({
           </div>
         </div>
       </div>
-      
+
       {/* Table content */}
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
         <div className="flex flex-col" style={{ height: "calc(98vh - 320px)" }}>
@@ -358,7 +383,7 @@ export default function AbandonedCallsReport({
               </thead>
             </table>
           </div>
-          
+
           {/* Table body */}
           <div className="overflow-y-auto flex-grow">
             <table className="w-full table-fixed divide-y divide-gray-200 text-xs">
@@ -392,12 +417,12 @@ export default function AbandonedCallsReport({
             </table>
           </div>
         </div>
-        
+
         {/* Pagination controls */}
         <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center text-xs text-gray-500">
             <span>Showing</span>
-            <select 
+            <select
               className="mx-2 border border-gray-300 rounded px-2 py-1 text-xs bg-white"
               value={rowsPerPage}
               onChange={(e) => setRowsPerPage(Number(e.target.value))}
@@ -409,9 +434,9 @@ export default function AbandonedCallsReport({
             </select>
             <span>records per page</span>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <button 
+            <button
               className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
@@ -419,7 +444,7 @@ export default function AbandonedCallsReport({
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <button 
+              <button
                 key={pageNum}
                 className={`px-2 py-1 border rounded text-xs ${page === pageNum ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
                 onClick={() => setPage(pageNum)}
@@ -427,7 +452,7 @@ export default function AbandonedCallsReport({
                 {pageNum}
               </button>
             ))}
-            <button 
+            <button
               className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}
