@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchAgentVDNIntervalAPI } from '@/services/vdnAPI';
+import { fetchAgentVDNIntervalAPI, refreshQueuesAPI } from '@/services/vdnAPI';
 import { Headers } from '@/services/commonAPI';
 import { Download, Filter, RefreshCcw, AlignJustify } from 'lucide-react';
 import { ReportRecord } from '@/types/agentQueueTypes';
@@ -93,6 +93,50 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
       setIsLoading(false);
     }
   };
+
+  const refreshReport = async () => {
+    const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    if (!token) {
+      console.error('No authentication token found');
+      alert('Authentication token missing. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        interval: '1440',
+        count: itemsPerPage,
+        page: 1
+      };
+      const header: Headers = {
+        Authorization: `Bearer ${token}`,
+      };
+      const result = await refreshQueuesAPI(reqBody, header);
+
+      if (result.success) {
+        setReportData(result.data.reports || []);
+        setNextPageToken(result.data.nextPageToken || null);
+        setTotalRecords(result.data.totalRecords || 0);
+        setCurrentPage(1);
+      } else {
+        console.error('Invalid API response:', result);
+        setReportData([]);
+        setNextPageToken(null);
+        setTotalRecords(0);
+      }
+    } catch (err) {
+      console.error('Error fetching reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -242,11 +286,7 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
           </div>
           <button
             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
-            onClick={() => {
-              setCurrentPage(1);
-              setNextPageToken(null);
-              fetchDailyReport(1, null);
-            }}
+            onClick={refreshReport}
           >
             <RefreshCcw size={16} className="mr-2" />Refresh
           </button>

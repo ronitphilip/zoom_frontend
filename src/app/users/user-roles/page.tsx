@@ -9,14 +9,17 @@ import { fetchAllRolesAPI, createRoleAPI, addRolePermissionsAPI, deleteRoleAPI }
 import { Headers } from '@/services/commonAPI';
 import PermissionTree from '@/components/filters/PermissionTree';
 
-const FEATURES = ['overview', 'historicalReports', 'realTime', 'userManagement'] as const;
+const FEATURES = ['overview', 'historicalReports', 'realTime', 'userManagement', 'teamManagement', 'settings', 'phones'] as const;
 export type Feature = typeof FEATURES[number];
 
 const ACTIONS: { [key in Feature]: string[] } = {
   overview: ['view'],
-  historicalReports: ['agentReports', 'queueReports', 'flowReports', 'otherReports',],
+  historicalReports: ['agentReports', 'queueReports', 'flowReports'],
   realTime: ['currentCalls', 'agentStatus'],
-  userManagement: ['manageuser', 'managerole']
+  userManagement: ['manageuser', 'managerole'],
+  teamManagement: ['view'],
+  settings: ['view'],
+  phones: ['outboundCalls', 'inboundCalls', 'rawData']
 };
 
 const Page = () => {

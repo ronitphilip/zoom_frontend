@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchAgentVDNIntervalAPI } from '@/services/vdnAPI';
+import { fetchAgentVDNIntervalAPI, refreshQueuesAPI } from '@/services/vdnAPI';
 import { Headers } from '@/services/commonAPI';
 import { Download, Filter, RefreshCcw, AlignJustify } from 'lucide-react';
 import { ReportRecord } from '@/types/agentQueueTypes';
@@ -95,30 +95,74 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
         }
     };
 
+    const refreshReport = async () => {
+        const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+        if (!token) {
+            console.error('No authentication token found');
+            alert('Authentication token missing. Please log in again.');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const reqBody = {
+                from: startDate,
+                to: endDate,
+                count: itemsPerPage,
+                page: 1,
+                interval: selectedInterval,
+            };
+            const header: Headers = {
+                Authorization: `Bearer ${token}`,
+            };
+            const result = await refreshQueuesAPI(reqBody, header);
+
+            if (result.success) {
+                setReportData(result.data.reports || []);
+                setNextPageToken(result.data.nextPageToken || null);
+                setTotalRecords(result.data.totalRecords || 0);
+                setCurrentPage(1);
+            } else {
+                console.error('Invalid API response:', result);
+                setReportData([]);
+                setNextPageToken(null);
+                setTotalRecords(0);
+            }
+        } catch (err) {
+            console.error('Error fetching reports:', err);
+            setReportData([]);
+            setNextPageToken(null);
+            setTotalRecords(0);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const downloadExcel = () => {
         if (!reportData || reportData.length === 0) {
-          console.error('No data available for export');
-          return;
+            console.error('No data available for export');
+            return;
         }
-    
+
         const worksheet = XLSX.utils.json_to_sheet(reportData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
-    
+
         const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
-          wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+            wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
         }));
         worksheet['!cols'] = colWidths;
-    
+
         XLSX.writeFile(workbook, 'vdn_interval_report.xlsx', { bookType: 'xlsx', type: 'binary' });
-      };
-    
-      const downloadCSV = () => {
+    };
+
+    const downloadCSV = () => {
         if (!reportData || reportData.length === 0) {
-          console.error('No data available for export');
-          return;
+            console.error('No data available for export');
+            return;
         }
-    
+
         const csv = Papa.unparse(reportData);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -127,7 +171,7 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
         link.setAttribute('download', 'vdn_interval_report.csv');
         link.click();
         URL.revokeObjectURL(url);
-      };
+    };
 
     const handlePreviousPage = () => {
         if (currentPage > 1) {
@@ -215,8 +259,8 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                         <Download size={16} className="mr-2" />PDF
                     </button>
                     <div className="relative">
-                        <button 
-                            onClick={() => setShowColumnMenu(!showColumnMenu)} 
+                        <button
+                            onClick={() => setShowColumnMenu(!showColumnMenu)}
                             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
                         >
                             <AlignJustify size={16} className="mr-2" />Columns
@@ -226,8 +270,8 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                                 <div className="p-2 max-h-96 overflow-y-auto">
                                     {Object.entries(visibleColumns).map(([column, isVisible]) => (
                                         <label key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded-md cursor-pointer">
-                                            <input 
-                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            <input
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                 type="checkbox"
                                                 checked={isVisible}
                                                 onChange={() => toggleColumn(column)}
@@ -243,11 +287,7 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                     </div>
                     <button
                         className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
-                        onClick={() => {
-                            setCurrentPage(1);
-                            setNextPageToken(null);
-                            fetchDailyReport(1, null);
-                        }}
+                        onClick={refreshReport}
                     >
                         <RefreshCcw size={16} className="mr-2" />Refresh
                     </button>
@@ -300,7 +340,7 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                             </select>
                         </div>
                         <div className="relative inline-block w-44">
-                            <select 
+                            <select
                                 className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 value={selectedFlow}
                                 onChange={(e) => setSelectedFlow(e.target.value)}

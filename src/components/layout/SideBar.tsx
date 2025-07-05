@@ -77,6 +77,7 @@ const SideBar = () => {
             label: 'Overview',
             hasChildren: false,
             href: '/dashboard',
+            permissionKey: 'overview.view'
         },
         {
             id: 'historicalReports',
@@ -123,6 +124,7 @@ const SideBar = () => {
                     permissionKey: 'historicalReports.flowReports'
                 }
             ],
+            permissionKey: 'historicalReports'
         },
         {
             id: 'realTime',
@@ -133,6 +135,7 @@ const SideBar = () => {
                 { id: 'currentCalls', icon: <PhoneCall size={16} />, label: 'Current Calls', hasChildren: false, href: '/realtime/calls', permissionKey: 'realTime.currentCalls' },
                 { id: 'agentStatus', icon: <Phone size={16} />, label: 'Agent Status', hasChildren: false, href: '/realtime/status', permissionKey: 'realTime.agentStatus' }
             ],
+            permissionKey: 'realTime'
         },
         {
             id: 'userManagement',
@@ -142,14 +145,16 @@ const SideBar = () => {
             children: [
                 { id: 'manageuser', icon: <Users size={16} />, label: 'Manage Users', hasChildren: false, href: '/users/manage-users', permissionKey: 'userManagement.manageuser' },
                 { id: 'managerole', icon: <UserCog2 size={16} />, label: 'User Roles', hasChildren: false, href: '/users/user-roles', permissionKey: 'userManagement.managerole' }
-            ]
+            ],
+            permissionKey: 'userManagement'
         },
         {
             id: 'teamManagement',
-            icon: <Settings2 size={20}/>,
+            icon: <Settings2 size={20} />,
             label: 'Team Management',
             hasChildren: false,
             href: '/team-management',
+            permissionKey: 'teamManagement.view'
         },
         {
             id: 'settings',
@@ -157,6 +162,7 @@ const SideBar = () => {
             label: 'Account Settings',
             hasChildren: false,
             href: '/settings',
+            permissionKey: 'settings.view'
         }
     ];
 
@@ -167,18 +173,19 @@ const SideBar = () => {
             label: 'Overview',
             hasChildren: false,
             href: '/dashboard',
+            permissionKey: 'overview.view'
         },
         {
-            id: 'otherReports',
-            icon: <PhoneCallIcon size={16} />,
+            id: 'phones',
+            icon: <PhoneCall size={16} />,
             label: 'Phone Reports',
             hasChildren: true,
+            permissionKey: 'phones',
             children: [
-                { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/reports/other/outbound', permissionKey: 'historicalReports.otherReports' },
-                { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/reports/other/inbound', permissionKey: 'historicalReports.otherReports' },
-                { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/reports/other/raw', permissionKey: 'historicalReports.otherReports' }
-            ],
-            permissionKey: 'historicalReports.otherReports'
+                { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/reports/other/outbound', permissionKey: 'phones.outboundCalls' },
+                { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/reports/other/inbound', permissionKey: 'phones.inboundCalls' },
+                { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/reports/other/raw', permissionKey: 'phones.rawData' }
+            ]
         }
     ];
 
@@ -326,12 +333,20 @@ const SideBar = () => {
                     )}
                 </div>
                 <nav className='flex flex-col justify-between h-full'>
-                    {sidebarOpen && (
+                    {sidebarOpen && hasPermission('phones') && (
                         <div className='px-5 space-y-3 py-3'>
-                            <p className="text-xs text-blue-300 uppercase tracking-wider fo space-y-3nt-medium">Dashboard</p>
+                            <p className="text-xs text-blue-300 uppercase tracking-wider font-medium">Dashboard</p>
                             <div>
-                                <button onClick={() => setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin ? 'text-blue-800 bg-white' : 'text-white'} me-3 `}>Contacts</button>
-                                <button onClick={() => setIsAdmin(!isAdmin)} className={`border border-white px-2 rounded ${isAdmin ? 'text-white' : 'text-blue-800 bg-white'}`}>Phones</button>
+                                <button onClick={() => setIsAdmin(true)}
+                                    className={`border border-white px-2 rounded ${isAdmin ? 'text-blue-800 bg-white' : 'text-white'} me-3 `}
+                                >
+                                    Contacts
+                                </button>
+                                <button onClick={() => setIsAdmin(false)}
+                                    className={`border border-white px-2 rounded ${isAdmin ? 'text-white' : 'text-blue-800 bg-white'}`}
+                                >
+                                    Phones
+                                </button>
                             </div>
                         </div>
                     )}
