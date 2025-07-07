@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation';
 import { ZoomAccount } from '@/types/zoomTypes';
 
-const AccountManagement = () => {
+const Page = () => {
 
     const [user, setUser] = useState<{ name: string; email: string } | null>(null);
     const [activeTab, setActiveTab] = useState('zoom');
@@ -349,4 +349,4 @@ const AccountManagement = () => {
     );
 };
 
-export default AccountManagement;
+export default Page;

@@ -11,7 +11,7 @@ import React, { useEffect, useState } from 'react'
 
 const ITEMS_PER_PAGE = 20;
 
-const page = () => {
+const Page = () => {
   const [startDate, setStartDate] = useState<string>('2025-01-01');
   const [endDate, setEndDate] = useState<string>('2025-06-01');
   const [callLog, setCallLog] = useState<CallLogEntry[] | null>(null);
@@ -202,4 +202,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

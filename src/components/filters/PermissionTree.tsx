@@ -11,8 +11,9 @@ interface PermissionTreeProps {
 
 const PermissionTree: React.FC<PermissionTreeProps> = ({ feature, actions, selectedActions, toggle }) => {
   const [expanded, setExpanded] = useState<boolean>(false);
+
   const isChecked: boolean = selectedActions[feature]?.length === actions.length;
-  const isIndeterminate: boolean = selectedActions[feature]?.length > 0 && !isChecked;
+  const isIndeterminate: boolean = !!selectedActions[feature]?.length && selectedActions[feature]?.length < actions.length;
 
   const toggleAll = () => {
     actions.forEach((action) => toggle(feature, action));

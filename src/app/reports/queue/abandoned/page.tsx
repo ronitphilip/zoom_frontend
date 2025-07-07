@@ -3,7 +3,7 @@ import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout'
 import AbandonedCallsReport from '@/components/queue-reports/AbandonedCallsReport'
 
-const page = () => {
+const Page = () => {
   const [startDate, setStartDate] = useState("2025-06-01");
   const [endDate, setEndDate] = useState("2025-06-30");
   return (
@@ -20,4 +20,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page

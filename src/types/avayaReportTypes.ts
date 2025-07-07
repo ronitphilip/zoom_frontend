@@ -13,7 +13,13 @@ export interface AgentTraceRecord {
   user_name: string;
   status?: string;
   sub_status?: string;
-  duration?: number;
+  duration?: number | string;
+  sequence: string;
+  state: string;
+  statusReason: string;
+  splitSkill: string;
+  queueWaitTime: string;
+  hold: string;
 }
 
 export interface AgentSplitSkillRecord {

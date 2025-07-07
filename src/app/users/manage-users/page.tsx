@@ -91,7 +91,6 @@ const Page = () => {
   const totalPages = Math.ceil(totalUsers / usersPerPage);
   const startIndex = (currentPage - 1) * usersPerPage;
   const endIndex = Math.min(startIndex + usersPerPage, totalUsers);
-  const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
   useEffect(() => {
     setCurrentPage(1);

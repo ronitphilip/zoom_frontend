@@ -96,14 +96,6 @@ const CommonHeader: React.FC<CommonProps> = ({ title, startDate, endDate, callLo
             return row;
         });
 
-        const headers = data.map((row) => {
-            const headerRow: { [key: string]: string } = {};
-            for (const { key, displayName } of fields) {
-                headerRow[key] = displayName;
-            }
-            return headerRow;
-        });
-
         const worksheet = XLSX.utils.json_to_sheet(data, {
             header: ['No', ...fields.map((f) => f.key)],
         });

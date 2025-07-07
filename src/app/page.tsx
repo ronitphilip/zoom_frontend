@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { loginAPI } from '@/services/authAPI';
 import { LoginRequestBody } from '@/types/userTypes';
 
-const page = () => {
+const Page = () => {
   const router = useRouter();
 
   const [formData, setFormData] = useState<LoginRequestBody>({
@@ -130,4 +130,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page

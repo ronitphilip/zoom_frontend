@@ -27,7 +27,6 @@ export default function SplitSkillDailyReport({
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
-  const [queueId, setQueueId] = useState<string>('all');
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
@@ -456,46 +455,26 @@ export default function SplitSkillDailyReport({
                 </svg>
               </div>
               <div className="w-full">
-                {queueId === 'all' ? (
-                  <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
-                ) : (
-                  <div className="grid grid-rows-3 gap-0 text-xs">
-                    {startDate && endDate && (
-                      <div className="flex items-center">
-                        <span className="text-indigo-600">Date:</span>
-                        <span className="font-medium text-indigo-900 ml-1">
-                          {new Date(startDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                          })}{' '}
-                          -{' '}
-                          {new Date(endDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    {queueId !== 'all' && (
-                      <div className="flex items-center">
-                        <span className="text-indigo-600">Queue:</span>
-                        <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                          {queueId === 'queue1'
-                            ? 'Queue 1'
-                            : queueId === 'queue2'
-                              ? 'Queue 2'
-                              : queueId === 'queue3'
-                                ? 'Queue 3'
-                                : queueId === 'queue4'
-                                  ? 'Queue 4'
-                                  : queueId}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="grid grid-rows-3 gap-0 text-xs">
+                  {startDate && endDate && (
+                    <div className="flex items-center">
+                      <span className="text-indigo-600">Date:</span>
+                      <span className="font-medium text-indigo-900 ml-1">
+                        {new Date(startDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}{' '}
+                        -{' '}
+                        {new Date(endDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

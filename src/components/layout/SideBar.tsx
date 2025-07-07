@@ -1,6 +1,6 @@
 'use client'
 import { decryptRole, RoleAttributes } from '@/utils/decryptRole';
-import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneCallIcon, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, Settings2, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
+import { BarChart3, Calendar, ChevronRight, Clock, LogOut, Phone, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Settings, Settings2, TrendingUp, User2, UserCog, UserCog2, UserRound, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
@@ -290,7 +290,9 @@ const SideBar = () => {
     };
 
     const handleLogout = () => {
-        sessionStorage.clear();
+        if (typeof window !== 'undefined') {
+            sessionStorage.clear();
+        }
         router.push('/');
     };
 

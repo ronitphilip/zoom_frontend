@@ -3,7 +3,7 @@ import MainLayout from '@/components/layout/MainLayout'
 import SkillCallProfile from '@/components/queue-reports/skill/SkillCallProfile'
 import React, { useState } from 'react'
 
-const page = () => {
+const Page = () => {
   const [startDate, setStartDate] = useState("2025-06-01");
   const [endDate, setEndDate] = useState("2025-06-30");
   return (
@@ -16,4 +16,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page

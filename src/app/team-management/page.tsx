@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { fetchTeamssAPI, createTeamssAPI, updateTeamsAPI, deleteTeamsAPI } from '@/services/teamAPI'
 import { Headers } from '@/services/commonAPI'
 
-const page = () => {
+const Page = () => {
     const [teamName, setTeamName] = useState<string>('');
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamData, setTeamData] = useState<TeamAttributes[]>([]);
@@ -16,8 +16,14 @@ const page = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [editingTeam, setEditingTeam] = useState<TeamAttributes | null>(null);
     const [searchTerm, setSearchTerm] = useState<string>('');
-
-    const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+    const [token, setToken] = useState<string | null>(null);
+    
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedToken = sessionStorage.getItem('tk');
+            setToken(storedToken ? JSON.parse(storedToken) : null);
+        }
+    }, []);
 
     const summaryMetrics = useMemo(() => [
         { 
@@ -323,7 +329,7 @@ const page = () => {
                             </label>
                             <div className="mt-2 max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3">
                                 {userData.length > 0 ? (
-                                    userData.map((user, index) => (
+                                    userData.map((user) => (
                                         <div key={user.user_id} className="flex items-center p-2 hover:bg-gray-50">
                                             <input
                                                 type="checkbox"
@@ -376,4 +382,4 @@ const page = () => {
     )
 }
 
-export default page
+export default Page
