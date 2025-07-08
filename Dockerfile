@@ -1,13 +1,11 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Use an official Node.js runtime as the base image
+FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install build tools for native dependencies
-RUN apk add --no-cache python3 make g++ linux-headers
-
-# Copy package.json and package-lock.json
-COPY package.json package-lock.json* ./
+# Copy package.json
+COPY package.json ./
 
 # Install dependencies
 RUN npm ci
@@ -15,37 +13,11 @@ RUN npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Build the Next.js application
+# Build the Next.js app
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS runner
-
-# Install curl for health checks
-RUN apk add --no-cache curl
-
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-
-WORKDIR /app
-
-# Copy necessary files with appropriate ownership
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/.env ./.env
-
-# Switch to non-root user
-USER nextjs
-
+# Expose the port the app runs on
 EXPOSE 3000
 
-ENV NODE_ENV=production
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:3000/ || exit 1
-
+# Start the Next.js app
 CMD ["npm", "start"]
