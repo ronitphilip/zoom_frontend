@@ -60,10 +60,9 @@ const SideBar = () => {
                     setRole(decrypted);
                 } catch (error) {
                     console.error("Decryption failed:", error);
-                    router.push('/');
                 }
             } else {
-                router.push('/');
+                console.error("Decryption failed");
             }
         };
 

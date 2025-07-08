@@ -8,8 +8,4 @@ services:
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_ENCRYPTION_KEY=${NEXT_PUBLIC_ENCRYPTION_KEY}
-      - NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
-    volumes:
-      - .:/app
-      - /app/node_modules
     restart: unless-stopped

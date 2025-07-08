@@ -1,3 +1,3 @@
-const server_url: string = process.env.NEXT_PUBLIC_SERVER_URL!
+const server_url: string = 'http://localhost:5000'
 
 export default server_url
