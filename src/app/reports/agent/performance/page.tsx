@@ -21,6 +21,7 @@ const Page = () => {
     const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
     const [allUsers, setAllUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+
     const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
         index: true,
         engagementId: true,
@@ -36,7 +37,6 @@ const Page = () => {
         holdCount: true,
         agentOfferedCount: true,
         status: true,
-        viewInteraction: true,
     });
 
     const fetchPerformanceReports = async (page: number = 1, token?: string) => {
@@ -142,24 +142,42 @@ const Page = () => {
 
     const totalPages = Math.ceil(totalRecords / parseInt(selectedCount));
 
+    const formatDuration = (seconds: number | null | undefined): string => {
+        if (!seconds || seconds <= 0) {
+            return '00:00:00';
+        }
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+
+        return [
+            hours.toString().padStart(2, '0'),
+            minutes.toString().padStart(2, '0'),
+            remainingSeconds.toString().padStart(2, '0'),
+        ].join(':');
+    };
+
     const summaryMetrics = [
         { label: 'Total Interactions', value: totalRecords, bgColor: 'bg-blue-100' },
         {
             label: 'Avg Handle Duration',
             value: performanceData.length
-                ? `${Math.round(
-                    performanceData.reduce((sum, row) => sum + (Number(row.conversation_duration) || 0), 0) / performanceData.length
-                )} sec`
-                : '0 sec',
+                ? formatDuration(
+                    performanceData.reduce((sum, row) => sum + (Number(row.conversation_duration) || 0), 0) /
+                    performanceData.length
+                )
+                : '00:00:00',
             bgColor: 'bg-orange-100',
         },
         {
             label: 'Most Common Channel',
             value: performanceData.length
                 ? [...performanceData]
-                    .sort((a, b) =>
-                        performanceData.filter(row => row.channel === b.channel).length -
-                        performanceData.filter(row => row.channel === a.channel).length
+                    .sort(
+                        (a, b) =>
+                            performanceData.filter((row) => row.channel === b.channel).length -
+                            performanceData.filter((row) => row.channel === a.channel).length
                     )[0].channel
                 : 'N/A',
             bgColor: 'bg-red-100',
@@ -180,7 +198,6 @@ const Page = () => {
         { key: 'transferCompletedCount', label: 'Transfer Completed', minWidth: '120px' },
         { key: 'holdCount', label: 'Hold Count', minWidth: '120px' },
         { key: 'agentOfferedCount', label: 'Agent Offered', minWidth: '120px' },
-        { key: 'viewInteraction', label: '', minWidth: '100px' },
     ];
 
     const channels = ['voice', 'messaging', 'video', 'email'];
@@ -250,12 +267,23 @@ const Page = () => {
                                 </div>
                             </div>
                         ))}
-                        <div className="flex-1 py-2 px-4 bg-indigo-50">
-                            <div className="flex items-center">
+                        <div className="flex-1 py-2 items-center px-4 bg-indigo-50">
+                            <div className='flex items-center h-full'>
                                 <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                                     <User size={16} />
                                 </div>
-                                <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                                <div className='ps-2'>
+                                    {
+                                        selectedAgent || selectedChannel ? (
+                                            <>
+                                                {selectedAgent && <p className="text-sm font-medium text-indigo-700">Agent: {selectedAgent}</p>}
+                                                {selectedChannel && <p className="text-sm font-medium text-indigo-700">Channel: {selectedChannel}</p>}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                                        )
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -315,7 +343,7 @@ const Page = () => {
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_name || '-'}</td>
                                                 )}
                                                 {visibleColumns.duration && (
-                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.conversation_duration || '-'}</td>
+                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{(data.conversation_duration) || '-'}</td>
                                                 )}
                                                 {visibleColumns.transferInitiatedCount && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.transfer_initiated_count || 0}</td>
@@ -328,9 +356,6 @@ const Page = () => {
                                                 )}
                                                 {visibleColumns.agentOfferedCount && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.agent_offered_count || 0}</td>
-                                                )}
-                                                {visibleColumns.viewInteraction && (
-                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">view</td>
                                                 )}
                                             </tr>
                                         ))

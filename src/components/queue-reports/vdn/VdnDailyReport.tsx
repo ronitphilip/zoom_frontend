@@ -44,9 +44,11 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
     voiceCalls: true,
   });
 
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
+
   useEffect(() => {
     fetchDailyReport(1, null);
-  }, []);
+  }, [itemsPerPage, selectedFlow, startDate, endDate]);
 
   const fetchDailyReport = async (page: number = 1, pageToken: string | null = null) => {
     const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
@@ -83,12 +85,14 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
         setReportData([]);
         setNextPageToken(null);
         setTotalRecords(0);
+        alert('Invalid API response. Please try again.');
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
       setNextPageToken(null);
       setTotalRecords(0);
+      alert('Failed to fetch reports. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +114,8 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
         to: endDate,
         interval: '1440',
         count: itemsPerPage,
-        page: 1
+        page: 1,
+        flowName: selectedFlow !== 'all' ? selectedFlow : undefined
       };
       const header: Headers = {
         Authorization: `Bearer ${token}`,
@@ -129,27 +134,25 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
         setTotalRecords(0);
       }
     } catch (err) {
-      console.error('Error fetching reports:', err);
+      console.error('Error refreshing reports:', err);
       setReportData([]);
       setNextPageToken(null);
       setTotalRecords(0);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
       fetchDailyReport(prevPage, null);
     }
   };
 
   const handleNextPage = () => {
-    if (currentPage * itemsPerPage < totalRecords) {
+    if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
       fetchDailyReport(nextPage, nextPageToken);
     }
   };
@@ -172,7 +175,7 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
 
     const colWidths = Object.keys(reportData[0] || {}).map((key) => ({
-      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key]).length))
+      wch: Math.max(key.length, ...reportData.map((row: any) => String(row[key] || '').length))
     }));
     worksheet['!cols'] = colWidths;
 
@@ -193,6 +196,13 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
     link.setAttribute('download', 'vdn_daily_report.csv');
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const calculateSummary = () => {
@@ -218,29 +228,21 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
       voiceCalls: reportData.reduce((acc, curr) => acc + (curr.voiceCalls || 0), 0),
     };
 
-    const formatTime = (seconds: number) => {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
     return {
       ...summary,
       acdTime: formatTime(summary.acdTime),
       acwTime: formatTime(summary.acwTime),
       agentRingTime: formatTime(summary.agentRingTime),
-      avgAcwTime: formatTime(Math.round(summary.avgAcwTime)),
-      avgHandleTime: formatTime(Math.round(summary.avgHandleTime)),
+      avgAcwTime: formatTime(summary.avgAcwTime / (reportData.length || 1)),
+      avgHandleTime: formatTime(summary.avgHandleTime / (reportData.length || 1)),
       maxHandleTime: formatTime(summary.maxHandleTime),
       abandonPercentage: summary.totalOffered ? Math.round((summary.abandonedCalls / summary.totalOffered) * 100) + '%' : '0%',
       successPercentage: summary.totalOffered ? Math.round((summary.totalAnswered / summary.totalOffered) * 100) + '%' : '0%',
     };
   };
 
-  const uniqueQueues = Array.from(new Set(reportData.map(item => item.flowName))).filter(Boolean);
+  const uniqueFlows = Array.from(new Set(reportData.map(item => item.flowName))).filter(Boolean);
   const summary = calculateSummary();
-  const totalPages = Math.ceil(totalRecords / itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -330,11 +332,15 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
               <select
                 className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 value={selectedFlow}
-                onChange={(e) => setSelectedFlow(e.target.value)}
+                onChange={(e) => {
+                  setSelectedFlow(e.target.value);
+                  setCurrentPage(1);
+                  setNextPageToken(null);
+                }}
               >
                 <option value="all" className="text-gray-500">All Flows</option>
-                {uniqueQueues.map((queue, idx) => (
-                  <option key={idx} value={queue}>{queue}</option>
+                {uniqueFlows.map((flow, idx) => (
+                  <option key={idx} value={flow}>{flow}</option>
                 ))}
               </select>
             </div>
@@ -358,7 +364,7 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
         <div className="grid grid-cols-3 gap-4">
           <div>
             <span className="text-sm font-medium text-gray-500">VDN Name:</span>
-            <span className="ml-2 text-sm font-semibold">{selectedFlow}</span>
+            <span className="ml-2 text-sm font-semibold">{selectedFlow === 'all' ? 'All Flows' : selectedFlow}</span>
           </div>
           <div>
             <span className="text-sm font-medium text-gray-500">Reporting Period:</span>
@@ -522,10 +528,14 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentRingTime || '00:00:00'}</td>
                       )}
                       {visibleColumns.avgAcwTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgAcwTime) || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
+                          {record.avgAcwTime ? formatTime(record.avgAcwTime) : '00:00:00'}
+                        </td>
                       )}
                       {visibleColumns.avgHandleTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgHandleTime) || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
+                          {record.avgHandleTime ? formatTime(record.avgHandleTime) : '00:00:00'}
+                        </td>
                       )}
                       {visibleColumns.digitalInteractions && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions || '0'}</td>
@@ -564,7 +574,6 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
                   setItemsPerPage(parseInt(e.target.value));
                   setCurrentPage(1);
                   setNextPageToken(null);
-                  fetchDailyReport(1, null);
                 }}
               >
                 <option value={10}>10</option>
@@ -583,12 +592,12 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
                 Previous
               </button>
               <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
-                {currentPage} of {totalPages}
+                Page {currentPage} of {totalPages}
               </span>
               <button
                 className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
-                disabled={currentPage * itemsPerPage >= totalRecords || !nextPageToken}
+                disabled={currentPage >= totalPages}
               >
                 Next
               </button>

@@ -51,7 +51,6 @@ const Page = () => {
 
     try {
       const result = await loginAPI(formData);
-      console.log(result);
       
       if(result.success){
         alert('Login success');

@@ -44,6 +44,10 @@ const Page = () => {
     warm_transfer_completed_count: true,
   });
 
+  useEffect(() => {
+    fetchSkillReports();
+  }, [selectedCount]);
+
   const fetchSkillReports = async (page: number = 1, token?: string) => {
     const tokenStorage = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
     if (!tokenStorage) {
@@ -63,7 +67,6 @@ const Page = () => {
         page,
         nextPageToken: token,
       };
-      console.log(reqBody);
 
       const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
       const result = await fetchAgentEngagementAPI(reqBody, headers);
@@ -74,13 +77,6 @@ const Page = () => {
         setNextPageToken(result.data?.nextPageToken);
         setTotalRecords(result.data?.totalRecords || 0);
         setCurrentPage(page);
-        console.log('Updated states:', {
-          skillData: result.data.engagement,
-          allUsers: result.data.users,
-          nextPageToken: result.data.nextPageToken,
-          totalRecords: result.data.totalRecords,
-          currentPage: page,
-        });
       } else {
         console.error('Failed to fetch reports:', result.error);
       }
@@ -134,10 +130,6 @@ const Page = () => {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchSkillReports();
-  }, [selectedCount]);
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -268,12 +260,23 @@ const Page = () => {
                 </div>
               </div>
             ))}
-            <div className="flex-1 py-2 px-4 bg-indigo-50">
-              <div className="flex items-center">
+            <div className="flex-1 py-2 items-center px-4 bg-indigo-50">
+              <div className='flex items-center h-full'>
                 <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                   <User size={16} />
                 </div>
-                <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                <div className='ps-2'>
+                  {
+                    selectedAgent || selectedChannel ? (
+                      <>
+                        {selectedAgent && <p className="text-sm font-medium text-indigo-700">Agent: {selectedAgent}</p>}
+                        {selectedChannel && <p className="text-sm font-medium text-indigo-700">Channel: {selectedChannel}</p>}
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                    )
+                  }
+                </div>
               </div>
             </div>
           </div>

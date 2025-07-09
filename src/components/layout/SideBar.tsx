@@ -194,6 +194,10 @@ const SideBar = () => {
         const [main, sub] = permissionKey.split('.');
         const section = (userRole.permissions as any)[main];
 
+        if (!sub) {
+            return section !== undefined;
+        }
+
         return Array.isArray(section) && section.includes(sub);
     };
 

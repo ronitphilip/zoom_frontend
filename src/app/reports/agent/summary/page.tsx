@@ -5,7 +5,7 @@ import { Headers } from '@/services/commonAPI';
 import { fetchGroupSummaryAPI, refreshGroupSummaryAPI } from '@/services/reportAPI';
 import { VisibleColumnType } from '@/types/reportTypes';
 import { User } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 const Page = () => {
   const [startDate, setStartDate] = useState<string>("2025-06-01");
@@ -107,11 +107,37 @@ const Page = () => {
     fetchSummaryReports();
   }, []);
 
-  const summaryMetrics = [
-    { label: 'Total Teams', value: '10', bgColor: 'bg-blue-100' },
-    { label: 'Avg Handle Duration', value: '10 mins', bgColor: 'bg-orange-100' },
-    { label: 'Most Common Channel', value: 'Voice', bgColor: 'bg-red-100' },
-  ];
+  const summaryMetrics = useMemo(() => {
+    if (isLoading || groupSummaryData.length === 0) {
+      return [
+        { label: 'Total Teams', value: '0', bgColor: 'bg-blue-100' },
+        { label: 'Avg Handle Duration', value: 'N/A', bgColor: 'bg-orange-100' },
+        { label: 'Most Common Channel', value: 'N/A', bgColor: 'bg-red-100' },
+      ];
+    }
+
+    const uniqueTeams = new Set(groupSummaryData.map((row: any) => row.team_name)).size;
+
+    const totalHandleDuration = groupSummaryData.reduce((sum: number, row: any) => {
+      const duration = parseFloat(row.avg_handle_duration) || 0;
+      return sum + duration;
+    }, 0);
+    const avgHandleDuration = totalHandleDuration / groupSummaryData.length;
+    const formattedAvgHandle = isNaN(avgHandleDuration) ? 'N/A' : `${Math.round(avgHandleDuration)} mins`;
+
+    const channelCounts = groupSummaryData.reduce((acc: Record<string, number>, row: any) => {
+      const channel = Array.isArray(row.channels) ? row.channels[0] : row.channels || 'Unknown';
+      acc[channel] = (acc[channel] || 0) + 1;
+      return acc;
+    }, {});
+    const mostCommonChannel = Object.entries(channelCounts).reduce((a, b) => (b[1] > a[1] ? b : a), ['N/A', 0])[0];
+
+    return [
+      { label: 'Total Teams', value: uniqueTeams.toString(), bgColor: 'bg-blue-100' },
+      { label: 'Avg Handle Duration', value: formattedAvgHandle, bgColor: 'bg-orange-100' },
+      { label: 'Most Common Channel', value: mostCommonChannel, bgColor: 'bg-red-100' },
+    ];
+  }, [groupSummaryData, isLoading]);
 
   const columnHeaders = [
     { key: 'team_name', label: 'Team Name', minWidth: '150px' },
@@ -187,12 +213,23 @@ const Page = () => {
                 </div>
               </div>
             ))}
-            <div className="flex-1 py-2 px-4 bg-indigo-50">
-              <div className="flex items-center">
+            <div className="flex-1 py-2 items-center px-4 bg-indigo-50">
+              <div className='flex items-center h-full'>
                 <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                   <User size={16} />
                 </div>
-                <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                <div className='ps-2'>
+                  {
+                    teamName || channel ? (
+                      <>
+                        {teamName && <p className="text-sm font-medium text-indigo-700">Team: {teamName}</p>}
+                        {channel && <p className="text-sm font-medium text-indigo-700">Channel: {channel}</p>}
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                    )
+                  }
+                </div>
               </div>
             </div>
           </div>

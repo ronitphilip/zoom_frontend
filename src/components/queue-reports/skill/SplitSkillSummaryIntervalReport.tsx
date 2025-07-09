@@ -27,7 +27,7 @@ export default function SplitSkillSummaryIntervalReport({
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
   const [selectedInterval, setSelectedInterval] = useState<string>('15');
-  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
@@ -62,14 +62,10 @@ export default function SplitSkillSummaryIntervalReport({
   );
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
-  const currentItems = reportData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   useEffect(() => {
     fetchReports(1, null);
-  }, [itemsPerPage]); 
+  }, [itemsPerPage]);
 
   const fetchReports = async (page: number = 1, nextPageToken: string | null = null) => {
     setIsLoading(true);
@@ -89,7 +85,7 @@ export default function SplitSkillSummaryIntervalReport({
         count: itemsPerPage,
         page,
         nextPageToken,
-        queueId: selectedQueue !== 'all' ? selectedQueue : undefined 
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined
       };
       const result = await fetchIntervalAgentQueuesAPI(reqBody, header);
 
@@ -98,7 +94,7 @@ export default function SplitSkillSummaryIntervalReport({
         setReportData(reports);
         setTotalRecords(result.data.totalRecords || 0);
         setNextPageToken(result.data.nextPageToken || null);
-        setCurrentPage(page); 
+        setCurrentPage(page);
         if (reports.length > itemsPerPage) {
           console.warn(`Received ${reports.length} records, expected up to ${itemsPerPage}`);
         }
@@ -118,8 +114,8 @@ export default function SplitSkillSummaryIntervalReport({
     }
   };
 
-  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
-    setIsLoading(true); 
+  const refreshReports = async () => {
+    setIsLoading(true);
     try {
       const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
       if (!token) {
@@ -134,8 +130,7 @@ export default function SplitSkillSummaryIntervalReport({
         to: endDate,
         interval: selectedInterval,
         count: itemsPerPage,
-        page,
-        nextPageToken: pageToken,
+        page: 1,
         queueId: selectedQueue !== 'all' ? selectedQueue : undefined
       };
 
@@ -162,15 +157,13 @@ export default function SplitSkillSummaryIntervalReport({
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
       fetchReports(prevPage, null);
     }
   };
 
   const handleNextPage = () => {
-    if (currentPage * itemsPerPage < totalRecords) {
+    if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
       fetchReports(nextPage, nextPageToken);
     }
   };
@@ -317,7 +310,7 @@ export default function SplitSkillSummaryIntervalReport({
             )}
           </div>
           <button
-            onClick={() => refreshReports(1, null)}
+            onClick={() => refreshReports()}
             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
           >
             <RefreshCcw size={16} className="mr-2" />Refresh
@@ -402,7 +395,7 @@ export default function SplitSkillSummaryIntervalReport({
           <div className="flex-1 py-3 px-4">
             <div className="flex items-center">
               <div className="p-2 rounded-md bg-blue-100 mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-700" fill="none " viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -442,7 +435,7 @@ export default function SplitSkillSummaryIntervalReport({
             <div className="flex items-center">
               <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
               </div>
               <div className="w-full">
@@ -486,7 +479,7 @@ export default function SplitSkillSummaryIntervalReport({
       <div className="bg-white rounded-lg shadow overflow-hidden w-full">
         <div className="flex flex-col" style={{ height: "calc(98vh - 270px)" }}>
           <div className="overflow-auto flex-grow">
-            {isLoading ? ( // Show loading message
+            {isLoading ? (
               <div className="text-center py-4 text-gray-500">Loading...</div>
             ) : reportData.length === 0 ? (
               <div className="text-center py-4 text-gray-500">No data available</div>
@@ -531,7 +524,7 @@ export default function SplitSkillSummaryIntervalReport({
                     {visibleColumns.avgAcwTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.avgAcwTime}</td>}
                     {visibleColumns.maxHandleTime && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.maxHandleTime}</td>}
                   </tr>
-                  {currentItems.map((record, index) => (
+                  {reportData.map((record, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDate(record.date)}</td>}
                       {visibleColumns.time && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.date)}</td>}
@@ -566,7 +559,6 @@ export default function SplitSkillSummaryIntervalReport({
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                     setNextPageToken(null);
-                    fetchReports(1, null); // Trigger fetch on itemsPerPage change
                   }}
                 >
                   <option value={10}>10</option>
@@ -574,7 +566,6 @@ export default function SplitSkillSummaryIntervalReport({
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span>of {totalRecords}</span>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -591,7 +582,7 @@ export default function SplitSkillSummaryIntervalReport({
               <button
                 className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
-                disabled={!nextPageToken && currentPage === totalPages}
+                disabled={currentPage >= totalPages}
               >
                 Next
               </button>

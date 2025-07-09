@@ -20,13 +20,15 @@ export default function SplitSkillDailyReport({
   setEndDate,
 }: SplitSkillDailyReportProps) {
   const [reportData, setReportData] = useState<SkillRecord[]>([]);
-  const [allAgents, setAllAgents] = useState([]);
+  const [allAgents, setAllAgents] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const [selectedQueue, setSelectedQueue] = useState<string>('all');
+  const [selectedAgent, setSelectedAgent] = useState<string>('all');
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     date: true,
@@ -72,6 +74,8 @@ export default function SplitSkillDailyReport({
         to: endDate,
         count: itemsPerPage,
         page,
+        queue: selectedQueue === 'all' ? null : selectedQueue,
+        agent: selectedAgent === 'all' ? null : selectedAgent,
         nextPageToken: pageToken,
       };
 
@@ -330,20 +334,32 @@ export default function SplitSkillDailyReport({
             <div className="relative inline-block w-44">
               <select
                 className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedQueue}
+                onChange={(e) => setSelectedQueue(e.target.value)}
               >
-                <option value="all" className="text-gray-500">All Queues</option>
+                <option value="all" className="text-gray-500">
+                  All Queues
+                </option>
                 {uniqueQueues.map((queue, idx) => (
-                  <option key={idx} value={queue}>{queue}</option>
+                  <option key={idx} value={queue}>
+                    {queue}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="relative inline-block w-44">
               <select
                 className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
               >
-                <option value="all" className="text-gray-500">All Agents</option>
+                <option value="all" className="text-gray-500">
+                  All Agents
+                </option>
                 {allAgents.map((name, idx) => (
-                  <option key={idx} value={name}>{name}</option>
+                  <option key={idx} value={name}>
+                    {name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -474,6 +490,18 @@ export default function SplitSkillDailyReport({
                       </span>
                     </div>
                   )}
+                  <div className="flex items-center">
+                    <span className="text-indigo-600">Queue:</span>
+                    <span className="font-medium text-indigo-900 ml-1">
+                      {selectedQueue === 'all' ? 'All Queues' : selectedQueue}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-indigo-600">Agent:</span>
+                    <span className="font-medium text-indigo-900 ml-1">
+                      {selectedAgent === 'all' ? 'All Agents' : selectedAgent}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

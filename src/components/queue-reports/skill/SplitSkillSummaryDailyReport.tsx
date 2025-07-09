@@ -57,15 +57,10 @@ export default function SplitSkillSummaryDailyReport({
     });
 
   const totalPages = Math.ceil(totalRecords / itemsPerPage);
-  const currentItems = reportData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   useEffect(() => {
-    fetchReports();
+    fetchReports(1, null);
   }, [itemsPerPage]);
-console.log(itemsPerPage);
 
   const fetchReports = async (page: number = 1, nextPageToken: string | null = null) => {
     setIsLoading(true);
@@ -92,7 +87,7 @@ console.log(itemsPerPage);
         setReportData(reports);
         setNextPageToken(result?.data?.nextPageToken || null);
         setTotalRecords(result?.data?.totalRecords || 0);
-        setCurrentPage(page); 
+        setCurrentPage(page);
         if (reports.length > itemsPerPage) {
           console.warn(`Received ${reports.length} records, expected up to ${itemsPerPage}`);
         }
@@ -112,7 +107,7 @@ console.log(itemsPerPage);
     }
   };
 
-  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+  const refreshReports = async () => {
     setIsLoading(true);
     try {
       const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
@@ -127,8 +122,7 @@ console.log(itemsPerPage);
         from: startDate,
         to: endDate,
         count: itemsPerPage,
-        page,
-        nextPageToken: pageToken,
+        page: 1,
         queueId: selectedQueue !== 'all' ? selectedQueue : undefined
       };
 
@@ -189,15 +183,13 @@ console.log(itemsPerPage);
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
       fetchReports(prevPage, null);
     }
   };
 
   const handleNextPage = () => {
-    if (currentPage * itemsPerPage < totalRecords) {
+    if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
       fetchReports(nextPage, nextPageToken);
     }
   };
@@ -283,7 +275,7 @@ console.log(itemsPerPage);
             )}
           </div>
           <button
-            onClick={() => refreshReports(1, null)}
+            onClick={() => refreshReports()}
             className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
           >
             <RefreshCcw size={16} className="mr-2" />Refresh
@@ -324,7 +316,7 @@ console.log(itemsPerPage);
                   value={selectedQueue}
                   onChange={(e) => {
                     setSelectedQueue(e.target.value);
-                    setCurrentPage(1); // Reset to first page on queue change
+                    setCurrentPage(1);
                     setNextPageToken(null);
                   }}
                 >
@@ -392,36 +384,30 @@ console.log(itemsPerPage);
               </div>
             </div>
           </div>
-          <div className="flex-1 py-2 px-4 bg-indigo-50">
-            <div className="flex items-center">
+          <div className="flex-1 py-2 items-center px-4 bg-indigo-50">
+            <div className='flex items-center h-full'>
               <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
               </div>
-              <div className="w-full">
-                {(selectedQueue === 'all') ? (
-                  <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
-                ) : (
-                  <div className="grid grid-rows-3 gap-0 text-xs">
-                    {startDate && endDate && (
-                      <div className="flex items-center">
-                        <span className="text-indigo-600">Date:</span>
-                        <span className="font-medium text-indigo-900 ml-1">
-                          {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                    {selectedQueue !== 'all' && (
-                      <div className="flex items-center">
-                        <span className="text-indigo-600">Queue:</span>
-                        <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                          {uniqueQueues.find(queue => queue.id === selectedQueue)?.name || selectedQueue}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <div className='ps-2'>
+                {
+                  selectedQueue !== 'all' ? (
+                    <div className="text-sm font-medium">
+                      {selectedQueue && (
+                        <div className="flex items-center">
+                          <span className="text-indigo-600">Queue:</span>
+                          <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
+                            {uniqueQueues.find(queue => queue.id === selectedQueue)?.name || selectedQueue}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                  )
+                }
               </div>
             </div>
           </div>
@@ -474,7 +460,7 @@ console.log(itemsPerPage);
                     {visibleColumns.transferCount && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.transferCount}</td>}
                     {visibleColumns.voiceCalls && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-blue-800">{summary.voiceCalls}</td>}
                   </tr>
-                  {currentItems.map((record, index) => ( // Use currentItems instead of reportData
+                  {reportData.map((record, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       {visibleColumns.date && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.date}</td>}
                       {visibleColumns.queueId && <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.queueId}</td>}
@@ -508,7 +494,6 @@ console.log(itemsPerPage);
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                     setNextPageToken(null);
-                    fetchReports(1, null); // Trigger fetch on itemsPerPage change
                   }}
                 >
                   <option value={10}>10</option>
@@ -516,7 +501,6 @@ console.log(itemsPerPage);
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span>of {totalRecords}</span>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -533,7 +517,7 @@ console.log(itemsPerPage);
               <button
                 className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
-                disabled={!nextPageToken && currentPage === totalPages}
+                disabled={currentPage >= totalPages}
               >
                 Next
               </button>

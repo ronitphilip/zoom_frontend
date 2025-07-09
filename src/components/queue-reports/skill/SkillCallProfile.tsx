@@ -27,8 +27,8 @@ export default function AbandonedCallsReport({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [selectedQueue, setSelectedQueue] = useState<string>('all');
-  const [allAgents, setAllAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState('');
+  const [allAgents, setAllAgents] = useState<string[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>('all');
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
     startTime: true,
@@ -53,6 +53,8 @@ export default function AbandonedCallsReport({
         name: record?.queueName || queueId
       };
     });
+
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
 
   useEffect(() => {
     fetchReports(1, null);
@@ -105,58 +107,56 @@ export default function AbandonedCallsReport({
     }
   };
 
-  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
-      setIsLoading(true); 
-      try {
-        const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
-        if (!token) {
-          console.error('No authentication token found');
-          alert('Authentication token missing. Please log in again.');
-          return;
-        }
-  
-        const header: Headers = { Authorization: `Bearer ${token}` };
-        const reqBody = {
-          from: startDate,
-          to: endDate,
-          count: itemsPerPage,
-          page,
-          nextPageToken: pageToken,
-          queueId: selectedQueue !== 'all' ? selectedQueue : undefined
-        };
-  
-        const result = await refreshQueuesAPI(reqBody, header);
-  
-        if (result.success) {
-          fetchReports(1, null);
-        } else {
-          console.error('Invalid API response:', result);
-          setReportData([]);
-          setNextPageToken(null);
-          setTotalRecords(0);
-        }
-      } catch (err) {
-        console.error('Error refreshing reports:', err);
+  const refreshReports = async () => {
+    setIsLoading(true);
+    try {
+      const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
+      if (!token) {
+        console.error('No authentication token found');
+        alert('Authentication token missing. Please log in again.');
+        return;
+      }
+
+      const header: Headers = { Authorization: `Bearer ${token}` };
+      const reqBody = {
+        from: startDate,
+        to: endDate,
+        count: itemsPerPage,
+        page: 1,
+        queueId: selectedQueue !== 'all' ? selectedQueue : undefined,
+        username: selectedAgent !== 'all' ? selectedAgent : undefined
+      };
+
+      const result = await refreshQueuesAPI(reqBody, header);
+
+      if (result.success) {
+        fetchReports(1, null);
+      } else {
+        console.error('Invalid API response:', result);
         setReportData([]);
         setNextPageToken(null);
         setTotalRecords(0);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Error refreshing reports:', err);
+      setReportData([]);
+      setNextPageToken(null);
+      setTotalRecords(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
       fetchReports(prevPage, null);
     }
   };
 
   const handleNextPage = () => {
-    if (currentPage * itemsPerPage < totalRecords) {
+    if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
       fetchReports(nextPage, nextPageToken);
     }
   };
@@ -202,9 +202,6 @@ export default function AbandonedCallsReport({
     URL.revokeObjectURL(url);
   };
 
-  const totalPages = Math.ceil(totalRecords / itemsPerPage);
-  const currentItems = reportData;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -243,11 +240,7 @@ export default function AbandonedCallsReport({
             )}
           </div>
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
-            onClick={() => {
-              setCurrentPage(1);
-              setNextPageToken(null);
-              refreshReports(1, null);
-            }}
+            onClick={() => refreshReports()}
           >
             <RefreshCcw size={16} className='mr-2' />Refresh
           </button>
@@ -282,7 +275,11 @@ export default function AbandonedCallsReport({
                 <select
                   className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   value={selectedAgent}
-                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedAgent(e.target.value);
+                    setCurrentPage(1);
+                    setNextPageToken(null);
+                  }}
                 >
                   <option value="all" className="text-gray-500">All Agents</option>
                   {allAgents.map((name, idx) => (
@@ -292,7 +289,11 @@ export default function AbandonedCallsReport({
                 <select
                   className="block w-full pl-3 pr-10 py-1.5 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   value={selectedQueue}
-                  onChange={(e) => setSelectedQueue(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedQueue(e.target.value);
+                    setCurrentPage(1);
+                    setNextPageToken(null);
+                  }}
                 >
                   <option value="all">All Queues</option>
                   {uniqueQueues.map(queue => (
@@ -340,7 +341,7 @@ export default function AbandonedCallsReport({
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-500">Total Abandoned Calls</p>
-                <p className="text-xl font-bold text-gray-800">{0}</p>
+                <p className="text-xl font-bold text-gray-800">{reportData.length}</p>
               </div>
             </div>
           </div>
@@ -364,7 +365,15 @@ export default function AbandonedCallsReport({
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-500">Total Waiting Duration</p>
-                <p className="text-xl font-bold text-gray-800">{0}</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {(() => {
+                    const totalSeconds = reportData.reduce((acc, curr) => acc + (curr.waitingDuration || 0), 0);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const secs = totalSeconds % 60;
+                    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                  })()}
+                </p>
               </div>
             </div>
           </div>
@@ -388,7 +397,9 @@ export default function AbandonedCallsReport({
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-500">Voice Mails</p>
-                <p className="text-xl font-bold text-gray-800">{0}</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {reportData.reduce((acc, curr) => acc + (curr.voiceMail || 0), 0)}
+                </p>
               </div>
             </div>
           </div>
@@ -406,15 +417,13 @@ export default function AbandonedCallsReport({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z"
                   />
                 </svg>
               </div>
               <div className="w-full">
-                {selectedQueue === 'all' ? (
-                  <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
-                ) : (
-                  <div className="grid grid-rows-2 gap-0 text-xs">
+                <div className="grid grid-rows-3 gap-0 text-xs">
+                  {startDate && endDate && (
                     <div className="flex items-center">
                       <span className="text-indigo-600">Date:</span>
                       <span className="font-medium text-indigo-900 ml-1">
@@ -431,14 +440,22 @@ export default function AbandonedCallsReport({
                         })}
                       </span>
                     </div>
-                    <div className="flex items-center">
-                      <span className="text-indigo-600">Queue:</span>
-                      <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
-                        {selectedQueue}
-                      </span>
-                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <span className="text-indigo-600">Queue:</span>
+                    <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
+                      {selectedQueue === 'all'
+                        ? 'All Queues'
+                        : uniqueQueues.find(queue => queue.id === selectedQueue)?.name || selectedQueue}
+                    </span>
                   </div>
-                )}
+                  <div className="flex items-center">
+                    <span className="text-indigo-600">Agent:</span>
+                    <span className="font-medium text-indigo-900 ml-1 truncate max-w-[150px]">
+                      {selectedAgent === 'all' ? 'All Agents' : selectedAgent}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -496,7 +513,7 @@ export default function AbandonedCallsReport({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentItems.map((record, index) => (
+                  {reportData.map((record, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       {visibleColumns.startTime && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
@@ -561,7 +578,6 @@ export default function AbandonedCallsReport({
                   setItemsPerPage(parseInt(e.target.value));
                   setCurrentPage(1);
                   setNextPageToken(null);
-                  fetchReports(1, null);
                 }}
               >
                 <option value={10}>10</option>
@@ -580,12 +596,12 @@ export default function AbandonedCallsReport({
                 Previous
               </button>
               <span className="px-2 py-1 border border-blue-500 bg-blue-500 text-white rounded text-xs">
-                {currentPage} of {totalPages}
+                Page {currentPage} of {totalPages}
               </span>
               <button
                 className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
-                disabled={currentPage * itemsPerPage >= totalRecords || !nextPageToken}
+                disabled={currentPage >= totalPages}
               >
                 Next
               </button>

@@ -13,7 +13,7 @@ const Page = () => {
   const [endDate, setEndDate] = useState<string>('2025-06-23');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedFormat, setSelectedFormat] = useState<string>('ASC');
+  const [selectedFormat, setSelectedFormat] = useState<string>('DESC');
   const [selectedCount, setSelectedCount] = useState<string>('10');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
@@ -224,8 +224,8 @@ const Page = () => {
             value={selectedFormat}
             onChange={(e) => setSelectedFormat(e.target.value)}
           >
-            <option value="ASC">Newest First</option>
-            <option value="DESC">Oldest First</option>
+            <option value="DESC">Newest First</option>
+            <option value="ASC">Oldest First</option>
           </select>
         </div>
       </ReportHeader>
@@ -246,12 +246,23 @@ const Page = () => {
                 </div>
               </div>
             ))}
-            <div className="flex-1 py-2 px-4 bg-indigo-50">
-              <div className="flex items-center">
+            <div className="flex-1 py-2 items-center px-4 bg-indigo-50">
+              <div className='flex items-center h-full'>
                 <div className="p-1.5 rounded-md bg-indigo-100 mr-3">
                   <User size={16} />
                 </div>
-                <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                <div className='ps-2'>
+                  {
+                    selectedAgent || selectedStatus ? (
+                      <>
+                        {selectedAgent && <p className="text-sm font-medium text-indigo-700">Agent: {selectedAgent}</p>}
+                        {selectedStatus && <p className="text-sm font-medium text-indigo-700">Status: {selectedStatus}</p>}
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-indigo-700">All data (no filters applied)</p>
+                    )
+                  }
+                </div>
               </div>
             </div>
           </div>
