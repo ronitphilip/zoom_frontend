@@ -13,7 +13,7 @@ const Page = () => {
   const [endDate, setEndDate] = useState<string>('2025-06-23');
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [selectedChannel, setSelectedChannel] = useState<string>('');
-  const [selectedFormat, setSelectedFormat] = useState<string>('ASC');
+  const [selectedFormat, setSelectedFormat] = useState<string>('DESC');
   const [selectedCount, setSelectedCount] = useState<string>('10');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
@@ -21,6 +21,7 @@ const Page = () => {
   const [skillData, setSkillData] = useState<AgentEngagementAttributes[]>([]);
   const [allUsers, setAllUsers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
     index: true,
     date: true,
@@ -110,6 +111,7 @@ const Page = () => {
       const reqBody = {
         from: startDate,
         to: endDate,
+        count: selectedCount
       };
 
       const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
@@ -238,8 +240,8 @@ const Page = () => {
             value={selectedFormat}
             onChange={(e) => setSelectedFormat(e.target.value)}
           >
-            <option value="ASC">Newest First</option>
-            <option value="DESC">Oldest First</option>
+            <option value="DESC">Newest First</option>
+            <option value="ASC">Oldest First</option>
           </select>
         </div>
       </ReportHeader>

@@ -352,8 +352,21 @@ export default function AbandonedCallsReport({
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500">Abandonment Rate</p>
-                <p className="text-xl font-bold text-gray-800">N/A</p>
+                <p className="text-xs font-medium text-gray-500">Queue with Most Calls</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {calls.length > 0
+                    ? (() => {
+                      const queueCounts = calls.reduce((acc, call) => {
+                        acc[call.queueName] = (acc[call.queueName] || 0) + 1;
+                        return acc;
+                      }, {} as Record<string, number>);
+                      const maxQueue = Object.entries(queueCounts).reduce((a, b) =>
+                        b[1] > a[1] ? b : a
+                      );
+                      return `${maxQueue[0]} (${maxQueue[1]})`;
+                    })()
+                    : 'N/A'}
+                </p>
               </div>
             </div>
           </div>

@@ -23,7 +23,6 @@ export default function SplitSkillDailyReport({
   const [allAgents, setAllAgents] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [totalRecords, setTotalRecords] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -54,10 +53,10 @@ export default function SplitSkillDailyReport({
   });
 
   useEffect(() => {
-    fetchReports(1, null);
+    fetchReports(1);
   }, [itemsPerPage]);
 
-  const fetchReports = async (page: number = 1, pageToken: string | null = null) => {
+  const fetchReports = async (page: number = 1) => {
     const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
     if (!token) {
       console.error('No authentication token found');
@@ -76,7 +75,6 @@ export default function SplitSkillDailyReport({
         page,
         queue: selectedQueue === 'all' ? null : selectedQueue,
         agent: selectedAgent === 'all' ? null : selectedAgent,
-        nextPageToken: pageToken,
       };
 
       const result = await fetchAgentQueuesAPI(reqBody, header);
@@ -84,26 +82,23 @@ export default function SplitSkillDailyReport({
       if (result.success) {
         setReportData(result.data.reports || []);
         setAllAgents(result.data.agents || []);
-        setNextPageToken(result.data.nextPageToken || null);
         setTotalRecords(result.data.totalRecords || 0);
         setCurrentPage(page);
       } else {
         console.error('Invalid API response:', result);
         setReportData([]);
-        setNextPageToken(null);
         setTotalRecords(0);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
-      setNextPageToken(null);
       setTotalRecords(0);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const refreshReports = async (page: number = 1, pageToken: string | null = null) => {
+  const refreshReports = async (page: number = 1) => {
     const token = sessionStorage.getItem('tk') ? JSON.parse(sessionStorage.getItem('tk')!) : null;
     if (!token) {
       console.error('No authentication token found');
@@ -119,8 +114,6 @@ export default function SplitSkillDailyReport({
         from: startDate,
         to: endDate,
         count: itemsPerPage,
-        page,
-        nextPageToken: pageToken,
       };
 
       const result = await refreshQueuesAPI(reqBody, header);
@@ -128,19 +121,16 @@ export default function SplitSkillDailyReport({
       if (result.success) {
         setReportData(result.data.reports || []);
         setAllAgents(result.data.agents || []);
-        setNextPageToken(result.data.nextPageToken || null);
         setTotalRecords(result.data.totalRecords || 0);
         setCurrentPage(page);
       } else {
         console.error('Invalid API response:', result);
         setReportData([]);
-        setNextPageToken(null);
         setTotalRecords(0);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
       setReportData([]);
-      setNextPageToken(null);
       setTotalRecords(0);
     } finally {
       setIsLoading(false);
@@ -185,7 +175,7 @@ export default function SplitSkillDailyReport({
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
-      fetchReports(prevPage, null);
+      fetchReports(prevPage);
     }
   };
 
@@ -193,7 +183,7 @@ export default function SplitSkillDailyReport({
     if (currentPage * itemsPerPage < totalRecords) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
-      fetchReports(nextPage, nextPageToken);
+      fetchReports(nextPage);
     }
   };
 
@@ -293,8 +283,7 @@ export default function SplitSkillDailyReport({
           <button className="px-3 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 flex items-center border border-blue-600 shadow-sm"
             onClick={() => {
               setCurrentPage(1);
-              setNextPageToken(null);
-              refreshReports(1, null);
+              refreshReports(1);
             }}
           >
             <RefreshCcw size={16} className='mr-2' />Refresh
@@ -367,8 +356,7 @@ export default function SplitSkillDailyReport({
           <button
             onClick={() => {
               setCurrentPage(1);
-              setNextPageToken(null);
-              fetchReports(1, null);
+              fetchReports(1);
             }}
             className="mt-4 sm:mt-0 px-4 py-1.5 bg-blue-700 text-white text-sm rounded-md hover:bg-blue-600 border border-blue-600 shadow-sm"
           >
@@ -916,8 +904,7 @@ export default function SplitSkillDailyReport({
                 onChange={(e) => {
                   setItemsPerPage(parseInt(e.target.value));
                   setCurrentPage(1);
-                  setNextPageToken(null);
-                  fetchReports(1, null);
+                  fetchReports(1);
                 }}
               >
                 <option value={10}>10</option>
@@ -941,7 +928,7 @@ export default function SplitSkillDailyReport({
               <button
                 className="px-2 py-1 border border-gray-300 rounded text-xs bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 onClick={handleNextPage}
-                disabled={currentPage * itemsPerPage >= totalRecords || !nextPageToken}
+                disabled={currentPage * itemsPerPage >= totalRecords}
               >
                 Next
               </button>

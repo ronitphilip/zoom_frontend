@@ -3,8 +3,8 @@ import React, { useState } from 'react'
 
 const DashboardOverview = () => {
 
-  const [startDate, setStartDate] = useState("2025-03-10");
-  const [endDate, setEndDate] = useState("2025-03-16");
+  const [startDate, setStartDate] = useState("2025-06-01");
+  const [endDate, setEndDate] = useState("2025-06-30");
 
   return (
     <>

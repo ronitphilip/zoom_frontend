@@ -21,6 +21,7 @@ const Page = () => {
   const [traceData, setTraceData] = useState<TraceData[]>([]);
   const [allUsers, setAllUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
     workSessionId: true,
     date: true,
@@ -30,7 +31,6 @@ const Page = () => {
     userSubStatus: true,
     teamName: true,
     duration: true,
-    viewSession: true,
   });
 
   const fetchTraceReports = async (page: number = 1, token?: string) => {
@@ -103,6 +103,7 @@ const Page = () => {
       const reqBody = {
         from: startDate,
         to: endDate,
+        count: selectedCount
       };
 
       const headers: Headers = { Authorization: `Bearer ${tokenStorage}` };
@@ -148,7 +149,10 @@ const Page = () => {
       label: 'Avg Session Duration',
       value: traceData.length
         ? `${Math.round(
-          traceData.reduce((sum, row) => sum + parseInt(row.occupied_duration), 0) / traceData.length
+          traceData
+            .filter(row => !isNaN(parseInt(row.occupied_duration)) && parseInt(row.occupied_duration) >= 0)
+            .reduce((sum, row) => sum + parseInt(row.occupied_duration), 0) /
+          (traceData.filter(row => !isNaN(parseInt(row.occupied_duration)) && parseInt(row.occupied_duration) >= 0).length || 1)
         )} sec`
         : '0 sec',
       bgColor: 'bg-orange-100',
@@ -307,7 +311,6 @@ const Page = () => {
                         <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_sub_status || '-'}</td>
                         <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">-</td>
                         <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.occupied_duration || 0}</td>
-                        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">view</td>
                       </tr>
                     ))
                   ) : (
