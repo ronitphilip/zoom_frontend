@@ -1,6 +1,12 @@
+import { zoomDataAttributes } from '@/services/dashboardAPI';
+import { formatDurationToHours } from '@/utils/formatters';
 import React from 'react'
 
-const ZoomUsage = () => {
+interface DashProps {
+  data: zoomDataAttributes | undefined;
+}
+
+const ZoomUsage = ({data}: DashProps) => {
   return (
     <div className="space-y-4">
       <h3 className="text-base font-semibold text-blue-800 mb-2">ZoomPhone Usage</h3>
@@ -13,16 +19,16 @@ const ZoomUsage = () => {
         <div className="p-3">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Inbound</span>
-            <span className="text-base font-semibold">4,328 min</span>
+            <span className="text-base font-semibold">{data?.inbound_call_minutes? formatDurationToHours(data.inbound_call_minutes) : '0'} hrs</span>
           </div>
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Outbound</span>
-            <span className="text-base font-semibold">3,945 min</span>
+            <span className="text-base font-semibold">{data?.outbound_call_minutes? formatDurationToHours(data.outbound_call_minutes) : '0'} hrs</span>
           </div>
           <div className="mt-2 pt-2 border-t border-gray-100">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700">Total</span>
-              <span className="text-base font-bold text-blue-700">8,273 min</span>
+              <span className="text-base font-bold text-blue-700">{data?.total_call_minutes? formatDurationToHours(data.total_call_minutes) : '0'} hrs</span>
             </div>
           </div>
         </div>
@@ -36,16 +42,16 @@ const ZoomUsage = () => {
         <div className="p-3">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Inbound</span>
-            <span className="text-base font-semibold">3:42</span>
+            <span className="text-base font-semibold">{data?.avg_inbound_call_duration? formatDurationToHours(data.avg_inbound_call_duration) : '0'} hrs</span>
           </div>
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-500">Outbound</span>
-            <span className="text-base font-semibold">2:18</span>
+            <span className="text-base font-semibold">{data?.avg_outbound_call_duration? formatDurationToHours(data.avg_outbound_call_duration) : '0'} hrs</span>
           </div>
           <div className="mt-2 pt-2 border-t border-gray-100">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700">Overall</span>
-              <span className="text-base font-bold text-blue-700">3:05</span>
+              <span className="text-base font-bold text-blue-700">{data?.avg_call_duration? formatDurationToHours(data.avg_call_duration) : '0'} hrs</span>
             </div>
           </div>
         </div>

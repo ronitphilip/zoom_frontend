@@ -1,10 +1,16 @@
-import { Calendar } from 'lucide-react'
-import React, { useState } from 'react'
+import { zoomDataAttributes } from '@/services/dashboardAPI';
+import { Calendar } from 'lucide-react';
 
-const DashboardOverview = () => {
+interface DashProps {
+  startDate: string;
+  endDate: string;
+  setStartDate: (date: string) => void;
+  setEndDate: (date: string) => void;
+  data: zoomDataAttributes | undefined;
+  fetchReports: () => void;
+}
 
-  const [startDate, setStartDate] = useState("2025-06-01");
-  const [endDate, setEndDate] = useState("2025-06-30");
+const DashboardOverview = ({ startDate, endDate, setStartDate, setEndDate, data, fetchReports }: DashProps) => {
 
   return (
     <>
@@ -27,7 +33,7 @@ const DashboardOverview = () => {
               className="border border-gray-300 rounded px-2 py-1.5 text-sm"
             />
           </div>
-          <button className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700">
+          <button onClick={fetchReports} className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700">
             Generate Report
           </button>
         </div>
@@ -35,27 +41,27 @@ const DashboardOverview = () => {
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Total Calls</h4>
-          <p className="text-xl font-bold mt-1">100</p>
+          <p className="text-xl font-bold mt-1">{data?.total_calls ? data.total_calls : '0'}</p>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Inbound</h4>
-          <p className="text-xl font-bold mt-1 text-green-600">80</p>
+          <p className="text-xl font-bold mt-1 text-green-600">{data?.inbound_calls ? data.inbound_calls : '0'}</p>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Outbound</h4>
-          <p className="text-xl font-bold mt-1 text-blue-600">20</p>
+          <p className="text-xl font-bold mt-1 text-blue-600">{data?.outbound_calls ? data.outbound_calls : '0'}</p>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Missed</h4>
-          <p className="text-xl font-bold mt-1 text-red-600">0</p>
+          <p className="text-xl font-bold mt-1 text-red-600">{data?.missed_calls ? data.missed_calls : '0'}</p>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Abandoned</h4>
-          <p className="text-xl font-bold mt-1 text-orange-600">4</p>
+          <p className="text-xl font-bold mt-1 text-orange-600">{data?.abandoned_calls ? data.abandoned_calls : '0'}</p>
         </div>
         <div className="bg-white p-3 rounded-lg shadow">
           <h4 className="text-sm font-medium text-gray-500">Avg. Duration</h4>
-          <p className="text-xl font-bold mt-1">20</p>
+          <p className="text-xl font-bold mt-1">{data?.avg_call_duration ? data.avg_call_duration : '0'} Mins</p>
         </div>
       </div>
     </>

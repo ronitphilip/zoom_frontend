@@ -92,3 +92,13 @@ export function durationToSeconds(duration: string): number {
 
   return 0;
 }
+
+export const formatDurationToHours = (minutes: string | undefined): string => {
+  const minutesNum = Number(minutes) || 0;
+  if (minutesNum < 0) return '00:00';
+
+  const hours = Math.floor(minutesNum / 60);
+  const remainingMinutes = Math.floor(minutesNum % 60);
+
+  return `${hours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`;
+};
