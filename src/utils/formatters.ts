@@ -6,6 +6,18 @@ export function formatDate(dateString: string): string {
   return date.toLocaleDateString();
 }
 
+// Format a date string to a localized DD:MM:YYYY
+export const formatDateToDDMMYYYY = (dateInput: string | number | Date): string => {
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) {
+    return '-';
+  }
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}:${month}:${year}`;
+};
+
 /**
  * Format a date string to a localized date and time format
  */
@@ -102,3 +114,49 @@ export const formatDurationToHours = (minutes: string | undefined): string => {
 
   return `${hours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`;
 };
+
+/**
+ * Convert milliseconds to a readable minutes format: MM:SS
+ */
+export function formatMillisecondsToMinutes(milliseconds: number | string | undefined | null): string {
+  // Handle undefined, null, or invalid inputs
+  if (milliseconds == null || isNaN(Number(milliseconds))) {
+    return '00:00';
+  }
+
+  const ms = typeof milliseconds === 'string' ? parseInt(milliseconds, 10) : milliseconds;
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Convert milliseconds to a readable hours format: HH:MM:SS
+ */
+export function formatMillisecondsToHours(milliseconds: number | string | undefined | null): string {
+  // Handle undefined, null, or invalid inputs
+  if (milliseconds == null || isNaN(Number(milliseconds))) {
+    return '00:00:00';
+  }
+
+  const ms = typeof milliseconds === 'string' ? parseInt(milliseconds, 10) : milliseconds;
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Convert milliseconds to seconds
+ */
+export function formatMillisecondsToSeconds(milliseconds: number | string | undefined | null): number {
+  // Handle undefined, null, or invalid inputs
+  if (milliseconds == null || isNaN(Number(milliseconds))) {
+    return 0;
+  }
+
+  const ms = typeof milliseconds === 'string' ? parseInt(milliseconds, 10) : milliseconds;
+  return Math.floor(ms / 1000);
+}

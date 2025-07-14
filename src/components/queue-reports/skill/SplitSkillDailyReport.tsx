@@ -5,6 +5,7 @@ import { SkillRecord } from '@/types/agentQueueTypes';
 import { AlignJustify, Download, Filter, RefreshCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { formatMillisecondsToMinutes } from '@/utils/formatters';
 
 interface SplitSkillDailyReportProps {
   startDate: string;
@@ -222,21 +223,14 @@ export default function SplitSkillDailyReport({
       engagement_id: '',
     };
 
-    const formatTime = (seconds: number) => {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
     return {
       ...summary,
-      duration: formatTime(summary.duration),
-      flow_duration: formatTime(summary.flow_duration),
-      handling_duration: formatTime(summary.handling_duration),
-      talk_duration: formatTime(summary.talk_duration),
-      waiting_duration: formatTime(summary.waiting_duration),
-      wrap_up_duration: formatTime(summary.wrap_up_duration),
+      duration: formatMillisecondsToMinutes(summary.duration),
+      flow_duration: formatMillisecondsToMinutes(summary.flow_duration),
+      handling_duration: formatMillisecondsToMinutes(summary.handling_duration),
+      talk_duration: formatMillisecondsToMinutes(summary.talk_duration),
+      waiting_duration: formatMillisecondsToMinutes(summary.waiting_duration),
+      wrap_up_duration: formatMillisecondsToMinutes(summary.wrap_up_duration),
     };
   };
 
@@ -836,37 +830,37 @@ export default function SplitSkillDailyReport({
                       )}
                       {visibleColumns.duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.flow_duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.flow_duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.flow_duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.handling_duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.handling_duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.handling_duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.talk_duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.talk_duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.talk_duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.waiting_duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.waiting_duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.waiting_duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.wrap_up_duration && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.wrap_up_duration || 'N/A'}
+                          {formatMillisecondsToMinutes(record.wrap_up_duration) || 'N/A'}
                         </td>
                       )}
                       {visibleColumns.transferCount && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {record.transferCount || '0'}
+                          {formatMillisecondsToMinutes(record.transferCount) || '0'}
                         </td>
                       )}
                       {visibleColumns.voice_mail && (

@@ -519,13 +519,13 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonPercentage || '0%'}</td>
                       )}
                       {visibleColumns.acdTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acdTime || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acdTime) || '00:00:00'}</td>
                       )}
                       {visibleColumns.acwTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acwTime || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.acwTime) || '00:00:00'}</td>
                       )}
                       {visibleColumns.agentRingTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentRingTime || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.agentRingTime) || '00:00:00'}</td>
                       )}
                       {visibleColumns.avgAcwTime && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">
@@ -544,7 +544,7 @@ export default function VdnDailyReport({ startDate, endDate, setStartDate, setEn
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.inboundCalls || '0'}</td>
                       )}
                       {visibleColumns.maxHandleTime && (
-                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.maxHandleTime || '00:00:00'}</td>
+                        <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatTime(record.maxHandleTime) || '00:00:00'}</td>
                       )}
                       {visibleColumns.outboundCalls && (
                         <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.outboundCalls || '0'}</td>

@@ -89,3 +89,11 @@ export interface AgentEngagementAttributes {
   conference_count: number;
   abandoned_count: number;
 }
+
+export interface AgentLoginReport {
+  user_name: string;
+  work_session_id: string;
+  login_time: string;
+  logout_time: string;
+  duration?: number;
+}

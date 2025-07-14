@@ -6,7 +6,7 @@ import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { PerformanceData, VisibleColumnType } from '@/types/reportTypes';
 import { fetchAgentPerfomanceAPI, refreshAgentPerformanceAPI } from '@/services/reportAPI';
 import { Headers } from '@/services/commonAPI';
-import { formatDate, formatTimeAMPM } from '@/utils/formatters';
+import { formatDate, formatMillisecondsToHours, formatMillisecondsToMinutes, formatTimeAMPM } from '@/utils/formatters';
 
 const Page = () => {
     const [startDate, setStartDate] = useState<string>('2025-06-01');
@@ -143,28 +143,12 @@ const Page = () => {
 
     const totalPages = Math.ceil(totalRecords / parseInt(selectedCount));
 
-    const formatDuration = (seconds: number | null | undefined): string => {
-        if (!seconds || seconds <= 0) {
-            return '00:00:00';
-        }
-
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-
-        return [
-            hours.toString().padStart(2, '0'),
-            minutes.toString().padStart(2, '0'),
-            remainingSeconds.toString().padStart(2, '0'),
-        ].join(':');
-    };
-
     const summaryMetrics = [
         { label: 'Total Interactions', value: totalRecords, bgColor: 'bg-blue-100' },
         {
-            label: 'Avg Handle Duration',
+            label: 'Avg Handle Duration(H)',
             value: performanceData.length
-                ? formatDuration(
+                ? formatMillisecondsToHours(
                     performanceData.reduce((sum, row) => sum + (Number(row.conversation_duration) || 0), 0) /
                     performanceData.length
                 )
@@ -190,10 +174,10 @@ const Page = () => {
         { key: 'engagementId', label: 'Engagement ID', minWidth: '150px' },
         { key: 'date', label: 'Date', minWidth: '100px' },
         { key: 'time', label: 'Time', minWidth: '100px' },
+        { key: 'userName', label: 'User Name', minWidth: '120px' },
         { key: 'queue', label: 'Queue', minWidth: '120px' },
         { key: 'channel', label: 'Channel', minWidth: '120px' },
         { key: 'direction', label: 'Direction', minWidth: '120px' },
-        { key: 'userName', label: 'User Name', minWidth: '120px' },
         { key: 'duration', label: 'Duration', minWidth: '120px' },
         { key: 'transferInitiatedCount', label: 'Transfer Initiated', minWidth: '120px' },
         { key: 'transferCompletedCount', label: 'Transfer Completed', minWidth: '120px' },
@@ -331,6 +315,9 @@ const Page = () => {
                                                 {visibleColumns.time && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{formatTimeAMPM(data.start_time) || '-'}</td>
                                                 )}
+                                                {visibleColumns.userName && (
+                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_name || '-'}</td>
+                                                )}
                                                 {visibleColumns.queue && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.queue_name || '-'}</td>
                                                 )}
@@ -340,11 +327,8 @@ const Page = () => {
                                                 {visibleColumns.direction && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.direction || '-'}</td>
                                                 )}
-                                                {visibleColumns.userName && (
-                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.user_name || '-'}</td>
-                                                )}
                                                 {visibleColumns.duration && (
-                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{(data.conversation_duration) || '-'}</td>
+                                                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{formatMillisecondsToMinutes(data.conversation_duration) + ' min'}</td>
                                                 )}
                                                 {visibleColumns.transferInitiatedCount && (
                                                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">{data.transfer_initiated_count || 0}</td>

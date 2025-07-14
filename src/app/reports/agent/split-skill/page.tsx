@@ -6,7 +6,7 @@ import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { VisibleColumnType, AgentEngagementAttributes } from '@/types/reportTypes';
 import { fetchAgentEngagementAPI, refreshAgentEngagementAPI } from '@/services/reportAPI';
 import { Headers } from '@/services/commonAPI';
-import { formatDate, formatTimeAMPM } from '@/utils/formatters';
+import { formatDate, formatMillisecondsToMinutes, formatMillisecondsToSeconds, formatTimeAMPM } from '@/utils/formatters';
 
 const Page = () => {
   const [startDate, setStartDate] = useState<string>('2025-06-01');
@@ -152,10 +152,10 @@ const Page = () => {
     {
       label: 'Avg Duration',
       value: skillData.length
-        ? `${Math.round(
+        ? `${formatMillisecondsToMinutes(Math.round(
           skillData.reduce((sum, row) => sum + (Number(row.duration) || 0), 0) / skillData.length
-        )} sec`
-        : '0 sec',
+        ))} mins`
+        : '0 mins',
       bgColor: 'bg-orange-100',
     },
     {
@@ -177,12 +177,12 @@ const Page = () => {
     { key: 'time', label: 'Time', minWidth: '100px' },
     { key: 'queue', label: 'Queue', minWidth: '120px' },
     { key: 'engagement_id', label: 'Engagement ID', minWidth: '150px' },
+    { key: 'user_name', label: 'User Name', minWidth: '120px' },
     { key: 'channel', label: 'Channel', minWidth: '120px' },
     { key: 'direction', label: 'Direction', minWidth: '120px' },
     { key: 'ani', label: 'ANI', minWidth: '150px' },
     { key: 'dnis', label: 'DNIS', minWidth: '150px' },
     { key: 'duration', label: 'Duration (sec)', minWidth: '120px' },
-    { key: 'user_name', label: 'User Name', minWidth: '120px' },
     { key: 'abandoned_count', label: 'Abandoned Count', minWidth: '120px' },
     { key: 'conference_count', label: 'Conference Count', minWidth: '120px' },
     { key: 'direct_transfer_count', label: 'Direct Transfer Count', minWidth: '120px' },
@@ -338,6 +338,11 @@ const Page = () => {
                             {data.engagement_id || '-'}
                           </td>
                         )}
+                        {visibleColumns.user_name && (
+                          <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">
+                            {data.user_name || '-'}
+                          </td>
+                        )}
                         {visibleColumns.channel && (
                           <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">
                             {data.channel || '-'}
@@ -360,12 +365,7 @@ const Page = () => {
                         )}
                         {visibleColumns.duration && (
                           <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">
-                            {data.duration || '-'}
-                          </td>
-                        )}
-                        {visibleColumns.user_name && (
-                          <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-900">
-                            {data.user_name || '-'}
+                            {formatMillisecondsToSeconds(data.duration) || '-'}
                           </td>
                         )}
                         {visibleColumns.abandoned_count && (

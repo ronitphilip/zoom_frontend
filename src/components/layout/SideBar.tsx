@@ -25,13 +25,26 @@ const SideBar = () => {
     const router = useRouter();
 
     useEffect(() => {
-        const pathToActive = getActivePath(navItems, pathname);
+        const pathToActive = getActivePath(phoneItems, pathname) || getActivePath(navItems, pathname);
         if (pathToActive) {
             const expandedByLevel: Record<number, string> = {};
             pathToActive.forEach((id, index) => {
                 expandedByLevel[index + 1] = id;
             });
+            
+            const parentPath = pathToActive.slice(0, -1);
+            parentPath.forEach((id, index) => {
+                if (!expandedByLevel[index + 1]) {
+                    expandedByLevel[index + 1] = id;
+                }
+            });
             setExpandedMap(expandedByLevel);
+        }
+
+        if (pathname.startsWith('/phones')) {
+            setIsAdmin(false);
+        } else {
+            setIsAdmin(true);
         }
     }, [pathname]);
 
@@ -92,6 +105,7 @@ const SideBar = () => {
                     children: [
                         { id: 'agentPerformance', icon: <UserRound size={16} />, label: 'Agent Performance', hasChildren: false, href: '/reports/agent/performance', permissionKey: 'historicalReports.agentReports' },
                         { id: 'agentTrace', icon: <UserRound size={16} />, label: 'Agent Trace Report', hasChildren: false, href: '/reports/agent/trace', permissionKey: 'historicalReports.agentReports' },
+                        { id: 'agentLogin', icon: <UserRound size={16} />, label: 'Login Logout Report', hasChildren: false, href: '/reports/agent/login-report', permissionKey: 'historicalReports.agentReports' },
                         { id: 'agentSkill', icon: <UserRound size={16} />, label: 'Agent Skill Report', hasChildren: false, href: '/reports/agent/split-skill', permissionKey: 'historicalReports.agentReports' },
                         { id: 'agentGroupSummary', icon: <Users size={16} />, label: 'Group Summary', hasChildren: false, href: '/reports/agent/summary', permissionKey: 'historicalReports.agentReports' }
                     ],
@@ -181,9 +195,9 @@ const SideBar = () => {
             hasChildren: true,
             permissionKey: 'phones',
             children: [
-                { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/reports/other/outbound', permissionKey: 'phones.outboundCalls' },
-                { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/reports/other/inbound', permissionKey: 'phones.inboundCalls' },
-                { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/reports/other/raw', permissionKey: 'phones.rawData' }
+                { id: 'outboundCalls', icon: <PhoneOutgoing size={16} />, label: 'Outbound Calls', hasChildren: false, href: '/phones/outbound', permissionKey: 'phones.outboundCalls' },
+                { id: 'inboundCalls', icon: <PhoneIncoming size={16} />, label: 'Inbound Calls', hasChildren: false, href: '/phones/inbound', permissionKey: 'phones.inboundCalls' },
+                { id: 'rawData', icon: <BarChart3 size={16} />, label: 'Raw Call Data', hasChildren: false, href: '/phones/raw', permissionKey: 'phones.rawData' }
             ]
         }
     ];

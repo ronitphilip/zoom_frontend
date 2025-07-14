@@ -32,3 +32,11 @@ export const refreshGroupSummaryAPI = async (reqBody: any, header: Headers): Pro
 export const refreshAgentEngagementAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
     return await commonAPI('POST', `${server_url}/reports/refresh/agent-engagement`, reqBody, header);
 };
+
+export const fetchAgentLoginReportAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('POST', `${server_url}/reports/agent-login-report`, reqBody, header);
+};
+
+export const refreshAgentLoginReportAPI = async (reqBody: any, header: Headers): Promise<ResponseData> => {
+    return await commonAPI('POST', `${server_url}/reports/refresh/agent-login-report`, reqBody, header);
+};

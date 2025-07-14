@@ -4,6 +4,7 @@ import ReportHeader from '@/components/queue-reports/agent/ReportHeader';
 import { Headers } from '@/services/commonAPI';
 import { fetchGroupSummaryAPI, refreshGroupSummaryAPI } from '@/services/reportAPI';
 import { VisibleColumnType } from '@/types/reportTypes';
+import { formatMillisecondsToMinutes } from '@/utils/formatters';
 import { User } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 
@@ -15,6 +16,7 @@ const Page = () => {
   const [channel, setChannel] = useState<string>("");
   const [groupSummaryData, setGroupSummaryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumnType>({
     team_name: true,
     total_interactions: true,
@@ -123,7 +125,7 @@ const Page = () => {
       return sum + duration;
     }, 0);
     const avgHandleDuration = totalHandleDuration / groupSummaryData.length;
-    const formattedAvgHandle = isNaN(avgHandleDuration) ? 'N/A' : `${Math.round(avgHandleDuration)} mins`;
+    const formattedAvgHandle = isNaN(avgHandleDuration) ? 'N/A' : formatMillisecondsToMinutes(avgHandleDuration);
 
     const channelCounts = groupSummaryData.reduce((acc: Record<string, number>, row: any) => {
       const channel = Array.isArray(row.channels) ? row.channels[0] : row.channels || 'Unknown';
@@ -134,7 +136,7 @@ const Page = () => {
 
     return [
       { label: 'Total Teams', value: uniqueTeams.toString(), bgColor: 'bg-blue-100' },
-      { label: 'Avg Handle Duration', value: formattedAvgHandle, bgColor: 'bg-orange-100' },
+      { label: 'Avg Handle Duration', value: formattedAvgHandle+' mins', bgColor: 'bg-orange-100' },
       { label: 'Most Common Channel', value: mostCommonChannel, bgColor: 'bg-red-100' },
     ];
   }, [groupSummaryData, isLoading]);
@@ -155,6 +157,14 @@ const Page = () => {
     { key: 'queues', label: 'Queue Name', minWidth: '120px' },
     { key: 'status', label: 'Status', minWidth: '120px' },
     { key: 'sub_status', label: 'Sub Status', minWidth: '120px' },
+  ];
+
+  const durationColumns = [
+    'avg_handle_duration',
+    'avg_wrap_up_duration',
+    'total_ready_duration',
+    'total_not_ready_duration',
+    'total_occupied_duration',
   ];
 
   return (
@@ -270,9 +280,11 @@ const Page = () => {
                           (header) =>
                             visibleColumns[header.key as keyof VisibleColumnType] && (
                               <td key={header.key} className="px-3 py-1.5 whitespace-nowrap">
-                                {Array.isArray(row[header.key])
-                                  ? row[header.key].join(", ")
-                                  : row[header.key] || "-"}
+                                {durationColumns.includes(header.key)
+                                  ? formatMillisecondsToMinutes(row[header.key]) || "-"
+                                  : Array.isArray(row[header.key])
+                                    ? row[header.key].join(", ")
+                                    : row[header.key] || "-"}
                               </td>
                             ),
                         )}

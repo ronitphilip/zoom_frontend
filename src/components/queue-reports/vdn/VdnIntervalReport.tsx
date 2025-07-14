@@ -5,6 +5,7 @@ import { Download, Filter, RefreshCcw, AlignJustify } from 'lucide-react';
 import { ReportRecord } from '@/types/agentQueueTypes';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { formatDuration } from '@/utils/formatters';
 
 interface VdnIntervalReportProps {
     startDate: string;
@@ -526,19 +527,19 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                                                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.abandonPercentage || '0%'}</td>
                                             )}
                                             {visibleColumns.acdTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acdTime || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acdTime) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.acwTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.acwTime || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.acwTime) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.agentRingTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.agentRingTime || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.agentRingTime) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.avgAcwTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgAcwTime) || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(Math.floor(record.avgAcwTime)) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.avgHandleTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{Math.round(record.avgHandleTime) || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(Math.floor(record.avgHandleTime)) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.digitalInteractions && (
                                                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.digitalInteractions || '0'}</td>
@@ -547,7 +548,7 @@ export default function VdnIntervalReport({ startDate, endDate, setStartDate, se
                                                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.inboundCalls || '0'}</td>
                                             )}
                                             {visibleColumns.maxHandleTime && (
-                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.maxHandleTime || '00:00:00'}</td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{formatDuration(record.maxHandleTime) || '00:00:00'}</td>
                                             )}
                                             {visibleColumns.outboundCalls && (
                                                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-900">{record.outboundCalls || '0'}</td>
